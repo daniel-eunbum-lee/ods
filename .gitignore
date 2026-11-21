@@ -1,0 +1,22 @@
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Generated test data and results (regenerate with `ods synth` / `ods run`)
+data/
+outputs/
+results/
+
+# Local tool config
+.claude/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
