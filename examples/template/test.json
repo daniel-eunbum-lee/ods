@@ -1,0 +1,6 @@
+{
+  "fs": 5120,
+  "units": "g",
+  "excitation_axis": "Z",
+  "time_file": "time.csv"
+}

@@ -1,0 +1,10 @@
+channel,node,direction,role
+CTRL,100,+Z,control
+A1Z,1,+Z,response
+A2Z,2,+Z,response
+A3Z,3,+Z,response
+A4Z,4,+Z,response
+A5X,5,+X,response
+A5Y,5,-Y,response
+A5Z,5,+Z,response
+A3S,3,0.707 0 0.707,response
