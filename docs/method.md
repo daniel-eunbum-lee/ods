@@ -87,6 +87,35 @@ MAC(a, b) = |aᴴb|² / ((aᴴa)(bᴴb))
 
 ## Validation
 
+### Analytical benchmark: base-driven cantilever
+
+The first check is against a textbook problem with an exact answer. A uniform Euler–Bernoulli cantilever (aluminium strip, 200 × 25 × 3 mm, hysteretic loss factor η = 0.04) is clamped to the table and driven along Z. Its absolute transmissibility is exact in closed form, with λ = βL, β⁴ = ρAω² / (EI(1 + jη)) and ξ = x/L:
+
+```
+T(ξ) = ½(cosh λξ + cos λξ)
+       + [sinh λ sin λ (cosh λξ − cos λξ) − (cosh λ sin λ + cos λ sinh λ)(sinh λξ − sin λξ)] / (2(1 + cos λ cosh λ))
+```
+
+The denominator vanishes on the cantilever frequency equation 1 + cos λ cosh λ = 0 (λₙ = 1.8751, 4.6941, 7.8548 [Blevins 1979]), giving 61.7, 386.6 and 1082.5 Hz in the 20–1500 Hz band. The test suite first verifies the formula itself: against Blevins' roots, a direct 4 × 4 boundary-value solve (to 1e-8) and a 64-mode modal sum (to 2e-5).
+
+60 s of white base acceleration is passed through T exactly, 1e-3 g rms sensor noise is added to every channel, and the files go through the normal load → run → export path at Δf = 0.3125 Hz (36 averages). The normalised-error band follows from estimation theory; the other limits are empirical, set with margin over 82 independent seeds:
+
+| Check | Limit | Worst of 82 seeds |
+|---|---|---|
+| \|T − T_exact\| / \|T_exact\| away from resonances (±3 half-power bandwidths): median / p99 / max | 0.1 % / 1.2 % / 8 % | 0.033 % / 0.66 % / 5.8 % |
+| Phase error away from resonances | 4° | 2.6° |
+| Error normalised by the theoretical random error [Bendat & Piersol 2010]: p95, p99 (Rayleigh: 1.73, 2.15) | 1.65–1.95, 2.05–2.50 | 1.77–1.83, 2.21–2.31 |
+| Peaks found | exactly the 3 modes | always 3 |
+| Peak frequency vs fₙ | max(1.5 Δf, 0.1 ηfₙ) | 0.19, 0.66, 1.57 Hz |
+| 1 − MAC, measured vs exact ODS at each peak | 1e-5 | 2.2e-6 |
+| Tip amplitude at each peak (also in `ods_peaks.csv`, mm/g) | 8 %, 1.5 %, 1.5 % | 5.3 %, 0.74 %, 0.39 % |
+
+The normalised-error check is the strictest. Its centre sits a few % above the Rayleigh values because the random-error formula is a large-sample one and coherence estimated from 36 averages reads slightly high. It passes only if H1 is unbiased, so a wrong spectral convention or scaling shows up even where the absolute error looks small. The looser limit on the first peak is real estimator behaviour, not slack. That peak is only about 8 bins wide, so the Hann window smears it and the coherence dips there. The Hann window alone biases a peak low by about 7 % at 4 bins across its half-power bandwidth and about 2 % at 8 bins. Random error comes on top, which is why the first peak reads 0.2–5.3 % low here. So the [Resolution](#assumptions-and-limits) minimum of 3 bins is not enough for accurate amplitudes.
+
+The test was also checked against planted bugs. It fails for a conjugated cross-spectrum, a mis-scaled H1, a half-bin frequency shift, a missing g → m/s² or 2π factor in the displacement, and a wrong table subtraction in the relative view. Picking peaks on relative T is invisible on a cantilever (the peaks coincide), but the box-model tests below catch it.
+
+### Synthetic box on isolators
+
 The synthetic model ([`src/ods/synth.py`](../src/ods/synth.py)) is a 9-node lumped-mass box on 4 isolators:
 
 | Part | Values |
@@ -133,5 +162,5 @@ The pytest suite ([`tests/test_ods.py`](../tests/test_ods.py)) checks all of thi
 - **Linear, stationary, steady-state response.** Rattles, gaps and amplitude-dependent isolators show up as low coherence.
 - **Single input along one axis per run.** Shapes from separate runs can't be combined unless they share a common reference.
 - **ODS, not modes.** For modal parameters (fₙ, ζ, clean shapes for FE correlation), fit the transmissibilities with a modal-fit tool, e.g. MATLAB `modalfit` or a rational-fraction / pLSCF fit.
-- **Resolution.** For a lightly damped peak the half-power bandwidth is 2ζfₙ. Use ≥ 3 bins across it, or the peak will be under-resolved and its amplitude biased low.
+- **Resolution.** For a lightly damped peak the half-power bandwidth is 2ζfₙ. Use ≥ 3 bins across it, or the peak will be under-resolved and its amplitude biased low. The Hann window alone reads the peak about 7 % low at 4 bins and about 2 % low at 8 bins, before random error (see the cantilever benchmark).
 - **Partly instrumented nodes** are drawn with zero motion in unmeasured directions. That's a display assumption, not a measurement.
