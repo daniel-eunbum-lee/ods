@@ -24,7 +24,8 @@ function res = runPipeline(test, opts)
             'check its direction in channels.csv and excitation_axis in test.json'], ...
             acosd(min(1, abs(gain))));
     end
-    sp.T = sp.T / gain;
+    % b = gain * a_table, so H1 against b is T_true / gain: multiply to get T per unit a_table.
+    sp.T = sp.T * gain;
     Trel = ods.relativeTransmissibility(sp.T, test.channelDirs, test.excitation);
     Trel(:, test.control) = 0;   % the control is the reference: zero relative motion
     resp = test.responses;

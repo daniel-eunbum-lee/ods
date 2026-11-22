@@ -267,6 +267,66 @@ def test_inverted_control_gives_same_views(synthetic_results):
     np.testing.assert_allclose(flipped.T_el, res.T_el, rtol=1e-9, atol=1e-12)
 
 
+@pytest.mark.parametrize("gain", [0.8, -0.8])
+def test_skewed_control_gives_same_views(synthetic_results, gain):
+    """A tilted control reading g = +/-0.8 of the table acceleration must not rescale T (issue #12)."""
+    d, test, res, truth = synthetic_results
+    data = test.data.copy()
+    data[:, test.control] *= gain
+    dirs = test.channel_dirs.copy()
+    dirs[test.control] = [0.6, 0.0, gain]  # unit vector with d . e_Z = gain
+    skewed = run(dataclasses.replace(test, data=data, channel_dirs=dirs), df=1.25)
+    resp = test.responses
+    np.testing.assert_allclose(skewed.spectra.T[:, resp], res.spectra.T[:, resp], rtol=1e-9, atol=1e-12)
+    np.testing.assert_allclose(skewed.T_rel, res.T_rel, rtol=1e-9, atol=1e-12)
+    np.testing.assert_allclose(skewed.T_el, res.T_el, rtol=1e-9, atol=1e-12)
+    np.testing.assert_allclose(skewed.spectra.T[1:, test.control], gain)  # it reads 0.8 of the table
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [("-z", [0, 0, -1]), ("+Z", [0, 0, 1]), (" z ", [0, 0, 1]), ("X", [1, 0, 0]), (None, [0, 0, 1])],
+)
+def test_excitation_axis_accepted(tmp_path, value, expected):
+    rows = "\n".join(f"{np.sin(i)},{np.cos(i)}" for i in range(100))
+    _write_small_test(tmp_path / "t", "C,A\n" + rows + "\n", meta={"fs": 100, "excitation_axis": value})
+    # None (JSON null) means "not set": the control's own direction (+Z) is used.
+    np.testing.assert_allclose(load_test(tmp_path / "t").excitation_axis, expected)
+
+
+@pytest.mark.parametrize("value", ["vertical", "", "--Z", "+-Z", 90, ["Z"], True, {}])
+def test_excitation_axis_invalid_raises(tmp_path, value):
+    rows = "\n".join(f"{np.sin(i)},{np.cos(i)}" for i in range(100))
+    _write_small_test(tmp_path / "t", "C,A\n" + rows + "\n", meta={"fs": 100, "excitation_axis": value})
+    with pytest.raises(ValueError, match="excitation_axis"):
+        load_test(tmp_path / "t")
+
+
+def test_negative_excitation_axis_end_to_end(synthetic_results):
+    """excitation_axis -Z with a +Z control gives g = -1: T, T_rel and T_el all flip sign."""
+    d, test, res, truth = synthetic_results
+    neg = run(dataclasses.replace(test, excitation_axis=np.array([0.0, 0.0, -1.0])), df=1.25)
+    np.testing.assert_allclose(neg.spectra.T, -res.spectra.T, rtol=1e-12, atol=1e-15)
+    np.testing.assert_allclose(neg.T_el, -res.T_el, rtol=1e-9, atol=1e-12)
+    # Relative to the table: each sensor's table contribution d.e flips with e, so T_rel flips too.
+    np.testing.assert_allclose(neg.T_rel, -res.T_rel, rtol=1e-9, atol=1e-12)
+
+
+def test_viewer_reports_table_rms_for_skewed_control(synthetic_results, tmp_path):
+    import json
+    import re
+
+    d, test, res, truth = synthetic_results
+    data = test.data.copy()
+    data[:, test.control] *= 0.8
+    dirs = test.channel_dirs.copy()
+    dirs[test.control] = [0.6, 0.0, 0.8]
+    skewed = run(dataclasses.replace(test, data=data, channel_dirs=dirs), df=1.25)
+    html = build_viewer(skewed, tmp_path / "v.html").read_text(encoding="utf-8")
+    grms = json.loads(re.search(r'"grms": ?([0-9.eE+-]+)', html).group(1))
+    assert grms == pytest.approx(np.std(test.data[:, test.control]), rel=1e-6)
+
+
 def test_control_perpendicular_to_excitation_raises(synthetic_results):
     d, test, res, truth = synthetic_results
     dirs = test.channel_dirs.copy()

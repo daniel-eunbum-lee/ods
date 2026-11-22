@@ -43,7 +43,8 @@ def run(
             f"Control direction is {np.degrees(np.arccos(min(1.0, abs(gain)))):.0f} deg from the excitation "
             "axis; check its direction in channels.csv and excitation_axis in test.json"
         )
-    sp.T = sp.T / gain
+    # b = gain * a_table, so H1 against b is T_true / gain: multiply to get T per unit a_table.
+    sp.T = sp.T * gain
     T_rel =relative_transmissibility(sp.T, test.channel_dirs, test.excitation_axis)
     T_rel[:, test.control] = 0.0  # the control is the reference: zero relative motion by definition
     disp = accel_to_displacement(T_rel, sp.f, test.units)

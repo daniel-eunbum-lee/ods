@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -144,8 +145,15 @@ def load_test(test_dir: str | Path) -> TestData:
     if (test_dir / "lines.csv").exists():
         lines = [(int(r["node_a"]), int(r["node_b"])) for r in _read_csv(test_dir / "lines.csv")]
 
-    axis_name = str(meta.get("excitation_axis", "")).upper()
-    excitation = np.array(_AXIS[axis_name]) if axis_name in _AXIS else channel_dirs[controls[0]]
+    if meta.get("excitation_axis") is not None:  # JSON null means "not set"
+        raw = meta["excitation_axis"]
+        axis_name = raw.strip().upper() if isinstance(raw, str) else ""
+        if not re.fullmatch(r"[+-]?[XYZ]", axis_name):
+            # Silently falling back to the control's direction would hide a skewed control (#12).
+            raise ValueError(f"excitation_axis must be X, Y or Z (optionally signed), got {meta['excitation_axis']!r}")
+        excitation = parse_direction(axis_name)
+    else:
+        excitation = channel_dirs[controls[0]]
 
     return TestData(
         fs=fs,

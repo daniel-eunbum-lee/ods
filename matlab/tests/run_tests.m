@@ -8,7 +8,8 @@ function run_tests()
     addpath(fullfile(here, '..'));
     tests = {@testSdofH1, @testSpectraErrors, @testRelativeTransmissibility, @testDisplacementUnits, ...
         @testMpcMac, @testRigidBodyProjector, @testNodeProjectors, @testParseDirection, ...
-        @testFindPeaksPlateau, @testFindPeaksBandEdge, @testSplitCsvLine, ...
+        @testFindPeaksPlateau, @testFindPeaksBandEdge, @testSplitCsvLine, @testSkewedControl, ...
+        @testExcitationAxis, ...
         @testSynthModel, @testModalTransmissibility, ...
         @testParityWithPython, @testEndToEndSynthetic};
     nFail = 0;
@@ -180,6 +181,56 @@ function testModalTransmissibility()
 end
 
 % ------------------------------------------------------------------ parity + end to end
+
+function testSkewedControl()
+    % A control tilted to read g = +/-0.8 of the table must give the same views (issue #12).
+    here = fileparts(mfilename('fullpath'));
+    test = ods.loadTest(fullfile(here, 'fixtures', 'parity'));
+    opts = struct('df', 4, 'band', [20 450]);
+    base = ods.runPipeline(test, opts);
+    resp = test.responses;
+    for g = [0.8, -0.8]
+        sk = test;
+        sk.data(:, sk.control) = g * sk.data(:, sk.control);
+        sk.channelDirs(sk.control, :) = [0.6 0 g];
+        r = ods.runPipeline(sk, opts);
+        checkClose(r.sp.T(:, resp), base.sp.T(:, resp), 1e-9, 1e-12, sprintf('T, g = %g', g));
+        checkClose(r.Trel, base.Trel, 1e-9, 1e-12, sprintf('T_rel, g = %g', g));
+        checkClose(r.Tel, base.Tel, 1e-9, 1e-12, sprintf('T_el, g = %g', g));
+        checkClose(r.sp.T(2:end, sk.control), g * ones(numel(r.sp.f) - 1, 1), 0, 1e-12, ...
+            sprintf('control column, g = %g', g));
+    end
+end
+
+function testExcitationAxis()
+    % Signed axes are accepted; anything else must raise instead of silently using the control's direction.
+    here = fileparts(mfilename('fullpath'));
+    d = tempname();
+    copyfile(fullfile(here, 'fixtures', 'parity'), d);
+    cleaner = onCleanup(@() rmdir(d, 's'));
+    good = {'"-z"', [0 0 -1]; '"+Z"', [0 0 1]; '" z "', [0 0 1]; 'null', [0 0 1]};   % null = not set -> control's +Z
+    for i = 1:size(good, 1)
+        writeJson(d, good{i, 1});
+        t = ods.loadTest(d);
+        checkClose(t.excitation, good{i, 2}, 0, 0, ['excitation_axis ' good{i, 1}]);
+    end
+    for bad = {'"vertical"', '""', '"--Z"', '"+-Z"', '90', '["Z"]', 'true', '{}'}
+        writeJson(d, bad{1});
+        threw = false;
+        try
+            ods.loadTest(d);
+        catch err
+            threw = ~isempty(strfind(err.message, 'excitation_axis')); %#ok<STREMP>
+        end
+        check(threw, 'excitation_axis %s should raise', bad{1});
+    end
+end
+
+function writeJson(d, axisJson)
+    fid = fopen(fullfile(d, 'test.json'), 'w');
+    fprintf(fid, '{"fs": 1024, "units": "g", "excitation_axis": %s, "time_file": "time.mat"}', axisJson);
+    fclose(fid);
+end
 
 function testParityWithPython()
     here = fileparts(mfilename('fullpath'));

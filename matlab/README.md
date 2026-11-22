@@ -73,8 +73,8 @@ Every function has `help` text, e.g. `help ods.computeSpectra`. The method is de
 addpath('matlab/tests'); run_tests
 ```
 
-This runs 15 tests:
-- analytic SDOF H1, units, MPC/MAC, rigid-body removal, node projection, direction parsing, plateau and band-edge peaks, CSV quoting;
+This runs 17 tests:
+- analytic SDOF H1, units, MPC/MAC, rigid-body removal, node projection, direction parsing, plateau and band-edge peaks, CSV quoting, tilted controls (g = ±0.8), invalid excitation_axis;
 - the synthetic model;
 - **parity with Python** on `tests/fixtures/parity` (T, coherence, ASDs, elastic view and peaks must match to ~1e-9);
 - an end-to-end synthetic run with MAC thresholds.
