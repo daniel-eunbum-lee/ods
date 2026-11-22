@@ -22,7 +22,7 @@ CSV headers are case-insensitive, and surrounding spaces are trimmed.
 |---|---|---|
 | `fs` | `fs` inside the MAT/NPZ, or from the CSV `time` column ((N−1)/time span) | Sample rate in Hz. If given here it always wins over the time file |
 | `units` | `"g"` | Acceleration units. `"g"` is converted with g₀ = 9.80665 m/s² for displacement; anything else is treated as m/s² |
-| `excitation_axis` | the control channel's direction | `"X"`, `"Y"` or `"Z"`, in global axes |
+| `excitation_axis` | the control channel's direction | `"X"`, `"Y"` or `"Z"` (optionally signed, e.g. `"-Z"`), in global axes. Set it whenever the control isn't mounted along a global axis, so a tilted control is corrected (see [method.md](method.md#2-three-views-of-the-motion)). Any other value is an error |
 | `time_file` | first of `time.npz`, `time.mat`, `time.csv` that exists (MATLAB: `time.mat`, `time.csv`) | |
 
 ## Time histories
@@ -104,3 +104,4 @@ These are display-only edges. Lines can include `base` nodes, for example to dra
 | `Need exactly one channel with role=control` | Zero or several control rows |
 | `Bad direction '...'` | Not `±X/Y/Z` and not three numbers |
 | `Sample rate unknown` | No `fs` anywhere and no `time` column |
+| `excitation_axis must be X, Y or Z (optionally signed)` | `excitation_axis` in `test.json` is something else (e.g. `"vertical"` or a number). Use `null` or leave it out to take the control's direction |

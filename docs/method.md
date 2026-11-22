@@ -20,7 +20,7 @@ On a shaker the input is measured, so this tool uses **transmissibility** to the
 Welch averaging [Welch 1967] uses a Hann window, 50 % overlap, and constant detrending per segment, with nfft = the smallest power of two giving Δf ≤ `--df`.
 
 ```
-Tᵢ(f)  = G_bxᵢ(f) / G_bb(f)                     (H1 estimator)
+Tᵢ(f)  = g · G_bxᵢ(f) / G_bb(f)                 (H1 estimator; g = d_ctrl·e, see §2)
 γ²ᵢ(f) = |G_bxᵢ|² / (G_bb · G_xᵢxᵢ)              (ordinary coherence)
 ```
 
@@ -35,6 +35,8 @@ H1 is unbiased by noise on the response channels and biased low by noise on the 
 | Elastic | R · (T − d·e) over the response channels | Deformation only: rigid-body motion removed |
 
 **Relative.** The table moves rigidly at T = 1 along e. A sensor reads the table's contribution as dᵢ·e. So "T − 1" is correct only for sensors parallel to the excitation; cross-axis sensors subtract nothing, and skewed ones subtract their projection.
+
+The control itself reads g = d_ctrl·e of the table acceleration (−1 if mounted upside down, 0.8 if tilted 37°). The raw H1 against it is therefore T_true/g, so the pipeline multiplies H1 by g to make every T per unit table acceleration. The control's own column then reads g, and its relative motion is 0. A control more than 60° off the excitation axis (|g| < 0.5) is rejected as a probable setup error. This assumes the table moves only along e: any cross-axis table motion leaks into a tilted control in proportion to the sine of the tilt angle. (A closed-loop controller that uses a tilted control also overdrives the table by 1/|g|.)
 
 **Elastic.** A small rigid motion (translation t, rotation θ) is seen by a sensor at pᵢ (taken about the centroid) as
 

@@ -95,11 +95,22 @@ function test = loadTest(testDir)
     end
 
     % --- excitation axis
-    axisName = '';
-    if isfield(meta, 'excitation_axis'), axisName = upper(meta.excitation_axis); end
-    axisVecs = struct('X', [1 0 0], 'Y', [0 1 0], 'Z', [0 0 1]);
-    if ~isempty(axisName) && isfield(axisVecs, axisName)
-        test.excitation = axisVecs.(axisName);
+    if isfield(meta, 'excitation_axis') && ~(isnumeric(meta.excitation_axis) && isempty(meta.excitation_axis))   % JSON null = not set; '' is an error, as in Python. (jsondecode gives [] for both null and an empty array, so [] is also 'not set' here, unlike Python.)
+        raw = meta.excitation_axis;
+        axisName = '';
+        if ischar(raw) && (isrow(raw) || isempty(raw))   % numbers, arrays, objects are errors
+            axisName = upper(strtrim(raw));
+        elseif isnumeric(raw) || islogical(raw)
+            raw = mat2str(raw);
+        else
+            raw = class(raw);
+        end
+        if isempty(regexp(axisName, '^[+-]?[XYZ]$', 'once'))
+            % Silently falling back to the control's direction would hide a skewed control (#12).
+            error('ods:loadTest', 'excitation_axis must be X, Y or Z (optionally signed), got %s', ...
+                char(raw));
+        end
+        test.excitation = ods.parseDirection(axisName);
     else
         test.excitation = test.channelDirs(controls, :);
     end

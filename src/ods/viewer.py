@@ -37,7 +37,9 @@ def build_viewer(res: Results, out_path: Path, title: str = "Shaker test") -> Pa
             "excitation": t.excitation_axis.tolist(),
             "band": list(res.band),
             "control": int(t.control),
-            "grms": float(np.std(t.data[:, t.control])),
+            # The control reads g = d_ctrl . e of the table, so its rms is |g| x the table rms. run()
+            # rejects |g| < 0.5; the guard only protects hand-built results from dividing by ~0.
+            "grms": float(np.std(t.data[:, t.control]) / max(abs(t.channel_dirs[t.control] @ t.excitation_axis), 0.5)),
         },
         "f": _rounded(sp.f[keep], 7),
         "ch": [
