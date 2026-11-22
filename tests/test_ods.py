@@ -204,10 +204,27 @@ def test_csv_input_matches_npz(tmp_path):
     sim = simulate(model, "Z", fs=1024.0, duration=2.0, seed=4)
     write_test(tmp_path / "npz", model, sim, fmt="npz")
     write_test(tmp_path / "csv", model, sim, fmt="csv")
-    a, b = load_test(tmp_path / "npz"), load_test(tmp_path / "csv")
+    write_test(tmp_path / "mat", model, sim, fmt="mat")
+    a, b, c = load_test(tmp_path / "npz"), load_test(tmp_path / "csv"), load_test(tmp_path / "mat")
     assert b.fs == pytest.approx(1024.0)
-    assert b.channel_names == a.channel_names
+    assert c.fs == pytest.approx(1024.0)
+    assert b.channel_names == a.channel_names == c.channel_names
     np.testing.assert_allclose(b.data, a.data, rtol=1e-5, atol=1e-6)
+    np.testing.assert_allclose(c.data, a.data, rtol=0, atol=0)
+
+
+def test_matlab_parity_fixture_is_current():
+    """matlab/tests/run_tests.m compares MATLAB against this fixture; it must match Python now."""
+    from pathlib import Path
+
+    import scipy.io
+
+    fx = Path(__file__).parents[1] / "matlab" / "tests" / "fixtures" / "parity"
+    ex = scipy.io.loadmat(fx / "expected.mat")
+    res = run(load_test(fx), df=float(ex["df"].squeeze()), band=tuple(ex["band"].ravel()))
+    np.testing.assert_allclose(res.spectra.T, ex["T"], rtol=1e-12, atol=1e-15)
+    np.testing.assert_allclose(res.T_el, ex["T_el"], rtol=1e-12, atol=1e-15)
+    assert [p.index + 1 for p in res.peaks] == ex["peak_index"].ravel().astype(int).tolist()
 
 
 def test_export_with_no_peaks(synthetic_results, tmp_path):

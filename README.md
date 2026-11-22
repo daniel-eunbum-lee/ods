@@ -60,6 +60,17 @@ uv run ods run my_test_z --out results/my_test_z --title "Unit 3, Z random"
 
 Start from the templates in [`examples/template/`](examples/template/).
 
+## MATLAB
+
+A MATLAB version lives in [`matlab/`](matlab/). It reads the same test folders, writes the same outputs and viewer, and needs no toolboxes:
+
+```matlab
+run('matlab/run_demo.m')                              % synthetic demo
+res = ods.process('my_test_z', 'results/my_test_z');  % your data (after addpath matlab)
+```
+
+See [matlab/README.md](matlab/README.md).
+
 ## Documentation
 
 | Guide | Contents |
@@ -83,6 +94,7 @@ src/ods/
   synth.py       synthetic box-on-isolators shaker test with known modes
   __main__.py    `ods synth` / `ods run` command line
 tests/           pytest suite (analytic SDOF checks + end-to-end synthetic validation)
+matlab/          MATLAB version: +ods package, run_demo.m, tests (incl. parity with Python)
 examples/        test-folder templates
 docs/            guides, screenshots, demo viewer
 ```

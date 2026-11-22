@@ -4,6 +4,7 @@ Expected directory layout (the synthetic generator writes the same thing)::
 
     test.json      {"fs": 5120, "units": "g", "excitation_axis": "Z", "time_file": "time.npz"}
     time.npz       data (N, nch), channels (nch,)      -- or --
+    time.mat       data (N, nch), channels (cellstr), fs   (MATLAB-friendly) -- or --
     time.csv       header = channel names; optional first column "time" (s)
     geometry.csv   node,x,y,z[,base]                    (base=1: shaker table / fixture point)
     channels.csv   channel,node,direction,role          (direction "+X"/"-Z" or "dx dy dz";
@@ -63,8 +64,22 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         return [{k.strip().lower(): v.strip() for k, v in row.items()} for row in csv.DictReader(fh)]
 
 
+def _mat_names(raw: np.ndarray) -> list[str]:
+    """Channel names from a .mat file: a cell array (object array) or a char matrix."""
+    if raw.dtype == object:
+        return [str(np.squeeze(c)) for c in raw.ravel()]
+    return [str(r).strip() for r in np.atleast_1d(raw)]
+
+
 def _load_time(path: Path, fs_meta: float | None) -> tuple[np.ndarray, list[str], float]:
-    if path.suffix.lower() == ".npz":
+    if path.suffix.lower() == ".mat":
+        import scipy.io
+
+        z = scipy.io.loadmat(path)
+        data = np.asarray(z["data"], dtype=float)
+        names = _mat_names(z["channels"])
+        fs = float(np.squeeze(z["fs"])) if "fs" in z else fs_meta
+    elif path.suffix.lower() == ".npz":
         with np.load(path) as z:
             data = np.asarray(z["data"], dtype=float)
             names = [str(c) for c in z["channels"]]
@@ -86,7 +101,8 @@ def _load_time(path: Path, fs_meta: float | None) -> tuple[np.ndarray, list[str]
 def load_test(test_dir: str | Path) -> TestData:
     test_dir = Path(test_dir)
     meta = json.loads((test_dir / "test.json").read_text()) if (test_dir / "test.json").exists() else {}
-    time_file = test_dir / meta.get("time_file", "time.npz" if (test_dir / "time.npz").exists() else "time.csv")
+    default = next((n for n in ("time.npz", "time.mat", "time.csv") if (test_dir / n).exists()), "time.csv")
+    time_file = test_dir / meta.get("time_file", default)
     data, names, fs = _load_time(time_file, meta.get("fs"))
 
     geo = _read_csv(test_dir / "geometry.csv")

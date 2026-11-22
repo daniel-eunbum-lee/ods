@@ -5,7 +5,7 @@ One folder holds **one synchronized run** (one test axis). File names are fixed 
 | File | Required | Purpose |
 |---|---|---|
 | `test.json` | recommended | Sample rate, units, excitation axis, time-file name |
-| `time.csv` or `time.npz` | yes | Time histories |
+| `time.csv`, `time.mat` or `time.npz` | yes | Time histories (`.npz` is Python-only) |
 | `geometry.csv` | yes | Node coordinates |
 | `channels.csv` | yes | Channel → node, direction, role |
 | `lines.csv` | no | Wireframe for the viewer |
@@ -23,7 +23,7 @@ CSV headers are case-insensitive, and surrounding spaces are trimmed.
 | `fs` | from the CSV `time` column, or from `fs` inside the NPZ | Sample rate in Hz |
 | `units` | `"g"` | Acceleration units. `"g"` is converted with g₀ = 9.80665 m/s² for displacement; anything else is treated as m/s² |
 | `excitation_axis` | the control channel's direction | `"X"`, `"Y"` or `"Z"`, in global axes |
-| `time_file` | `time.npz` if it exists, else `time.csv` | |
+| `time_file` | first of `time.npz`, `time.mat`, `time.csv` that exists (MATLAB: `time.mat`, `time.csv`) | |
 
 ## Time histories
 
@@ -40,6 +40,14 @@ time,CTRL,A1Z,A2Z,...
 ```python
 np.savez("time.npz", data=data, channels=np.array(names), fs=5120.0)
 ```
+
+**MAT** (works in both Python and MATLAB): the same variables, with `channels` as a cell array of names.
+
+```matlab
+save('time.mat', 'data', 'channels', 'fs')   % data N x nch, channels {1 x nch} or {nch x 1}
+```
+
+The Python tool can write one: `uv run ods synth --format mat`.
 
 Every channel name must appear in `channels.csv`.
 

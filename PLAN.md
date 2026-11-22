@@ -44,6 +44,22 @@ Peak picking on the norm of `T_rel` found only 2 of ~10 resonances. On the isola
 elastic modes. Peak picking now uses absolute `T` with a |T|²-weighted coherence gate. An
 "elastic" view (6-DOF rigid-body least-squares removal) was added for showing those modes.
 
+## Phase 5 — MATLAB port (branch `feat/matlab-version`)
+Constraints: no MATLAB/Octave on the dev machine, so the port is written to be checked
+against Python numerically rather than by hand.
+- Base MATLAB only (no Signal Processing Toolbox): own Welch/H1 with periodic Hann,
+  constant detrend, density scaling, mean averaging — same as `scipy.signal.csd/welch`.
+  Own peak finder replicating `scipy.signal.find_peaks` (distance, then prominence).
+- Conservative syntax (char/cellstr, no `arguments` blocks, no string arrays) so it also
+  runs in GNU Octave.
+- Layout: `matlab/+ods/` package (loadTest, computeSpectra, shapes helpers, findPeaks,
+  runPipeline, exportResults, buildViewer → reuses `src/ods/viewer_template.html`,
+  animateShape native figure, synth), `matlab/run_demo.m`, `matlab/tests/run_tests.m`.
+- Time files: MATLAB can't read NPZ, so both versions accept `time.mat`
+  (`data`, `channels`, `fs`); Python `ods synth --format mat` writes it.
+- Parity: `matlab/tests/make_parity_fixture.py` writes a short synthetic test + Python's
+  T/coherence/peaks; `run_tests.m` asserts MATLAB matches to ~1e-9.
+
 ## Phase 4 — Verification
 - pytest: SDOF analytic transmissibility vs H1 estimate; units/scaling of shapes;
   synthetic end-to-end: ODS peaks within one bin of true fn, MAC(ODS, true mode) > 0.9

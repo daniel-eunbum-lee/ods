@@ -234,8 +234,18 @@ def write_test(out_dir: Path, model: Model, sim: dict, fmt: str = "npz") -> None
     elif fmt == "npz":
         time_file = "time.npz"
         np.savez_compressed(out_dir / time_file, data=sim["data"], fs=sim["fs"], channels=np.array(names))
+    elif fmt == "mat":
+        import scipy.io
+
+        time_file = "time.mat"
+        chans = np.empty((len(names), 1), dtype=object)  # saved as a MATLAB cell array
+        chans[:, 0] = names
+        scipy.io.savemat(
+            out_dir / time_file, {"data": sim["data"].astype(float), "channels": chans, "fs": sim["fs"]},
+            do_compression=True,
+        )
     else:
-        raise ValueError(f"fmt must be 'npz' or 'csv', got {fmt!r}")
+        raise ValueError(f"fmt must be 'npz', 'mat' or 'csv', got {fmt!r}")
 
     with open(out_dir / "test.json", "w") as fh:
         json.dump({"fs": sim["fs"], "units": "g", "excitation_axis": sim["axis"], "time_file": time_file}, fh, indent=2)
