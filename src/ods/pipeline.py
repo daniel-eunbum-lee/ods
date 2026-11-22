@@ -34,7 +34,17 @@ def run(
 ) -> Results:
     nfft = nfft_for_resolution(test.fs, df)
     sp = compute_spectra(test.data, test.control, test.fs, nfft)
-    T_rel = relative_transmissibility(sp.T, test.channel_dirs, test.excitation_axis)
+    # H1 is referenced to what the control reads, (d_ctrl . e) * table acceleration. Rescale so
+    # T is per unit table acceleration along e; otherwise an inverted (-Z) or skewed control
+    # breaks the relative view and the base-node motion.
+    gain = float(test.channel_dirs[test.control] @ test.excitation_axis)
+    if abs(gain) < 0.5:
+        raise ValueError(
+            f"Control direction is {np.degrees(np.arccos(min(1.0, abs(gain)))):.0f} deg from the excitation "
+            "axis; check its direction in channels.csv and excitation_axis in test.json"
+        )
+    sp.T = sp.T / gain
+    T_rel =relative_transmissibility(sp.T, test.channel_dirs, test.excitation_axis)
     T_rel[:, test.control] = 0.0  # the control is the reference: zero relative motion by definition
     disp = accel_to_displacement(T_rel, sp.f, test.units)
     resp = test.responses

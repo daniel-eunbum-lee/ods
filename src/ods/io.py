@@ -4,6 +4,7 @@ Expected directory layout (the synthetic generator writes the same thing)::
 
     test.json      {"fs": 5120, "units": "g", "excitation_axis": "Z", "time_file": "time.npz"}
     time.npz       data (N, nch), channels (nch,)      -- or --
+    time.mat       data (N, nch), channels (cellstr), fs   (MATLAB-friendly) -- or --
     time.csv       header = channel names; optional first column "time" (s)
     geometry.csv   node,x,y,z[,base]                    (base=1: shaker table / fixture point)
     channels.csv   channel,node,direction,role          (direction "+X"/"-Z" or "dx dy dz";
@@ -59,42 +60,73 @@ def parse_direction(text: str) -> np.ndarray:
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
-    with open(path, newline="") as fh:
-        return [{k.strip().lower(): v.strip() for k, v in row.items()} for row in csv.DictReader(fh)]
+    """Rows as dicts with lower-cased keys. utf-8-sig drops the BOM Excel writes; short rows
+    get "" for missing fields, extra fields are dropped, and blank rows are skipped."""
+    with open(path, newline="", encoding="utf-8-sig") as fh:
+        rows = []
+        for row in csv.DictReader(fh):
+            clean = {k.strip().lower(): (v or "").strip() for k, v in row.items() if k is not None}
+            if any(clean.values()):
+                rows.append(clean)
+        return rows
+
+
+def _mat_names(raw: np.ndarray) -> list[str]:
+    """Channel names from a .mat file: a cell array (object array) or a char matrix."""
+    if raw.dtype == object:
+        return [str(np.squeeze(c)).strip() for c in raw.ravel()]
+    return [str(r).strip() for r in np.atleast_1d(raw)]
 
 
 def _load_time(path: Path, fs_meta: float | None) -> tuple[np.ndarray, list[str], float]:
-    if path.suffix.lower() == ".npz":
+    if path.suffix.lower() == ".mat":
+        import scipy.io
+
+        z = scipy.io.loadmat(path)
+        data = np.asarray(z["data"], dtype=float)
+        names = _mat_names(z["channels"])
+        fs_file = float(np.squeeze(z["fs"])) if "fs" in z else None
+    elif path.suffix.lower() == ".npz":
         with np.load(path) as z:
             data = np.asarray(z["data"], dtype=float)
             names = [str(c) for c in z["channels"]]
-            fs = float(z["fs"]) if "fs" in z else fs_meta
+            fs_file = float(z["fs"]) if "fs" in z else None
     else:
-        with open(path, newline="") as fh:
+        with open(path, newline="", encoding="utf-8-sig") as fh:
             names = [h.strip() for h in next(csv.reader(fh))]
-        data = np.loadtxt(path, delimiter=",", skiprows=1, ndmin=2)
-        fs = fs_meta
+        data = np.loadtxt(path, delimiter=",", skiprows=1, ndmin=2, encoding="utf-8-sig")
+        fs_file = None
         if names[0].lower() == "time":
-            dt = np.median(np.diff(data[:, 0]))
-            fs = fs or 1.0 / dt
+            t = data[:, 0]
+            # Span over count, not 1/median(diff): printed times are rounded, so individual
+            # steps are quantised and the median step can be off by one rounding unit.
+            if len(t) > 1 and t[-1] > t[0]:
+                fs_file = (len(t) - 1) / (t[-1] - t[0])
             data, names = data[:, 1:], names[1:]
+    # test.json wins, so a user can correct a wrong rate without rewriting the time file.
+    fs = fs_meta if fs_meta is not None else fs_file
     if fs is None:
         raise ValueError("Sample rate unknown: put 'fs' in test.json or a 'time' column in the CSV")
-    return data, names, fs
+    return data, names, float(fs)
 
 
 def load_test(test_dir: str | Path) -> TestData:
     test_dir = Path(test_dir)
-    meta = json.loads((test_dir / "test.json").read_text()) if (test_dir / "test.json").exists() else {}
-    time_file = test_dir / meta.get("time_file", "time.npz" if (test_dir / "time.npz").exists() else "time.csv")
+    meta = json.loads((test_dir / "test.json").read_text(encoding="utf-8-sig")) if (test_dir / "test.json").exists() else {}
+    default = next((n for n in ("time.npz", "time.mat", "time.csv") if (test_dir / n).exists()), "time.csv")
+    time_file = test_dir / meta.get("time_file", default)
     data, names, fs = _load_time(time_file, meta.get("fs"))
 
     geo = _read_csv(test_dir / "geometry.csv")
     node_ids = np.array([int(r["node"]) for r in geo])
     node_xyz = np.array([[float(r["x"]), float(r["y"]), float(r["z"])] for r in geo])
-    node_is_base = np.array([r.get("base", "0") in ("1", "true", "yes") for r in geo])
+    node_is_base = np.array([r.get("base", "0").lower() in ("1", "true", "yes") for r in geo])
 
-    chan_rows = {r["channel"]: r for r in _read_csv(test_dir / "channels.csv")}
+    chan_rows: dict[str, dict[str, str]] = {}
+    for r in _read_csv(test_dir / "channels.csv"):
+        if r["channel"] in chan_rows:
+            raise ValueError(f"Duplicate channel in channels.csv: {r['channel']!r}")
+        chan_rows[r["channel"]] = r
     missing = [n for n in names if n not in chan_rows]
     if missing:
         raise ValueError(f"Channels in time data but not in channels.csv: {missing}")

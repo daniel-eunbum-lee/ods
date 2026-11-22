@@ -90,10 +90,13 @@ def find_peaks(
     ind_db = 20 * np.log10(np.maximum(indicator, 1e-12))
     in_band = (f >= band[0]) & (f <= band[1])
     df = f[1] - f[0]
+    # Search the whole curve and keep in-band peaks afterwards. Masking out-of-band bins to
+    # -inf instead would turn a band edge on a falling/rising slope into a fake local maximum
+    # with infinite prominence. floor(x + 0.5) (round half up) matches MATLAB's round().
     idx, _ = scipy.signal.find_peaks(
-        np.where(in_band, ind_db, -np.inf),
+        ind_db,
         prominence=prominence_db,
-        distance=max(1, int(round(min_spacing_hz / df))),
+        distance=max(1, int(np.floor(min_spacing_hz / df + 0.5))),
     )
     w_coh = (power * coh).sum(axis=1) / np.maximum(power.sum(axis=1), 1e-30)
     peaks = []

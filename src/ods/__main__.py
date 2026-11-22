@@ -78,7 +78,7 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--fs", type=float, default=5120.0)
     s.add_argument("--duration", type=float, default=60.0, help="seconds")
     s.add_argument("--seed", type=int, default=1)
-    s.add_argument("--format", default="npz", choices=["npz", "csv"], help="time-history file format")
+    s.add_argument("--format", default="npz", choices=["npz", "mat", "csv"], help="time-history file format")
     s.set_defaults(func=_cmd_synth)
 
     r = sub.add_parser("run", help="compute ODS for a test directory")

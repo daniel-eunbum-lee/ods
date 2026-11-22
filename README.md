@@ -13,7 +13,7 @@ What it does:
 - **Automatic peak picking**, gated on coherence, plus an MPC readout that flags mixed or complex shapes.
 - **A standalone HTML viewer** in one shareable file with no dependencies. It animates the 3D shape, and you can click any frequency on the spectrum.
 - **Report-ready outputs**: CSVs (transmissibility, coherence, ASD, per-peak shapes in mm/g) and an NPZ of everything.
-- **Validated** on a synthetic shaker test with known modes: peaks within about 1 bin of the true frequencies, and MAC up to 0.999 ([details](docs/method.md#validation)).
+- **Validated** on a synthetic shaker test with known modes: peaks within 0.4 % of the true frequencies, and MAC up to 0.999 ([details](docs/method.md#validation)).
 
 ## Quick start
 
@@ -60,6 +60,17 @@ uv run ods run my_test_z --out results/my_test_z --title "Unit 3, Z random"
 
 Start from the templates in [`examples/template/`](examples/template/).
 
+## MATLAB
+
+A MATLAB version lives in [`matlab/`](matlab/). It reads the same test folders, writes the same outputs and viewer, and needs no toolboxes:
+
+```matlab
+run('matlab/run_demo.m')                              % synthetic demo
+res = ods.process('my_test_z', 'results/my_test_z');  % your data (after addpath matlab)
+```
+
+See [matlab/README.md](matlab/README.md).
+
 ## Documentation
 
 | Guide | Contents |
@@ -83,6 +94,7 @@ src/ods/
   synth.py       synthetic box-on-isolators shaker test with known modes
   __main__.py    `ods synth` / `ods run` command line
 tests/           pytest suite (analytic SDOF checks + end-to-end synthetic validation)
+matlab/          MATLAB version: +ods package, run_demo.m, tests (incl. parity with Python)
 examples/        test-folder templates
 docs/            guides, screenshots, demo viewer
 ```

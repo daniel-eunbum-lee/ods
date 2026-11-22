@@ -1,0 +1,6 @@
+{
+  "fs": 1024.0,
+  "units": "g",
+  "excitation_axis": "Z",
+  "time_file": "time.mat"
+}

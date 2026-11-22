@@ -12,6 +12,8 @@ This guide covers installing the tool, running the built-in demo, preparing your
 
 ---
 
+> **Using MATLAB?** The same workflow is available in MATLAB, using the same test folders, outputs and viewer. See [matlab/README.md](../matlab/README.md).
+
 ## 1. Install
 
 You need Python ≥ 3.11 and [uv](https://docs.astral.sh/uv/).
@@ -89,7 +91,7 @@ You can also open [`docs/demo/ods_viewer.html`](demo/ods_viewer.html) without ru
 
 All channels, including the control accelerometer, must come from **one synchronized recording**. Phase between channels is the whole point. X, Y and Z runs are separate tests, so process each one separately.
 
-Export the time histories to CSV (one column per channel, optional `time` column first) or to NPZ. Units are usually g. If your data is in m/s², set `"units": "m/s^2"`.
+Export the time histories to CSV (one column per channel, optional `time` column first), MAT or NPZ. Units are usually g. If your data is in m/s², set `"units": "m/s^2"`.
 
 ### Step 2: Make a test folder
 

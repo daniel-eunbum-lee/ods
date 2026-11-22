@@ -204,10 +204,110 @@ def test_csv_input_matches_npz(tmp_path):
     sim = simulate(model, "Z", fs=1024.0, duration=2.0, seed=4)
     write_test(tmp_path / "npz", model, sim, fmt="npz")
     write_test(tmp_path / "csv", model, sim, fmt="csv")
-    a, b = load_test(tmp_path / "npz"), load_test(tmp_path / "csv")
+    write_test(tmp_path / "mat", model, sim, fmt="mat")
+    a, b, c = load_test(tmp_path / "npz"), load_test(tmp_path / "csv"), load_test(tmp_path / "mat")
     assert b.fs == pytest.approx(1024.0)
-    assert b.channel_names == a.channel_names
+    assert c.fs == pytest.approx(1024.0)
+    assert b.channel_names == a.channel_names == c.channel_names
     np.testing.assert_allclose(b.data, a.data, rtol=1e-5, atol=1e-6)
+    np.testing.assert_allclose(c.data, a.data, rtol=0, atol=0)
+
+
+def test_matlab_parity_fixture_is_current():
+    """matlab/tests/run_tests.m compares MATLAB against this fixture; it must match Python now."""
+    from pathlib import Path
+
+    import scipy.io
+
+    fx = Path(__file__).parents[1] / "matlab" / "tests" / "fixtures" / "parity"
+    ex = scipy.io.loadmat(fx / "expected.mat")
+    res = run(load_test(fx), df=float(ex["df"].squeeze()), band=tuple(ex["band"].ravel()))
+    np.testing.assert_allclose(res.spectra.T, ex["T"], rtol=1e-12, atol=1e-15)
+    np.testing.assert_allclose(res.T_el, ex["T_el"], rtol=1e-12, atol=1e-15)
+    np.testing.assert_allclose(res.spectra.coh, ex["coh"], rtol=0, atol=1e-12)
+    np.testing.assert_allclose(res.spectra.Gxx, ex["Gxx"], rtol=1e-12, atol=0)
+    np.testing.assert_allclose(res.rigid_R, ex["rigid_R"], rtol=0, atol=1e-12)
+    np.testing.assert_allclose(res.disp_el, ex["disp_el"], rtol=1e-12, atol=1e-15)
+    assert [p.index + 1 for p in res.peaks] == ex["peak_index"].ravel().astype(int).tolist()
+
+
+# ---------------------------------------------------------------- regressions from code review
+
+
+def test_no_spurious_peak_at_band_edge():
+    """A curve falling across fmin must not yield a 'peak' at the first in-band bin."""
+    from ods.shapes import find_peaks
+
+    f = np.arange(200.0)
+    x = -0.2 * f
+    x[119:122] += [6, 12, 6]  # bump centred on 120 Hz
+    T = (10 ** (x / 20))[:, None]
+    peaks = find_peaks(f, T, np.ones_like(T, dtype=float), band=(60, 199), prominence_db=3, min_coh=0.5)
+    assert [p.f for p in peaks] == [120.0]
+
+
+def test_inverted_control_gives_same_views(synthetic_results):
+    """A control mounted -Z (data negated) must give the same T, relative and elastic views."""
+    d, test, res, truth = synthetic_results
+    data = test.data.copy()
+    data[:, test.control] *= -1
+    dirs = test.channel_dirs.copy()
+    dirs[test.control] *= -1
+    flipped = run(dataclasses.replace(test, data=data, channel_dirs=dirs), df=1.25)
+    resp = test.responses
+    np.testing.assert_allclose(flipped.spectra.T[:, resp], res.spectra.T[:, resp], rtol=1e-9, atol=1e-12)
+    np.testing.assert_allclose(flipped.spectra.T[:, test.control], -1.0)  # it reads minus the table
+    np.testing.assert_allclose(flipped.T_rel, res.T_rel, rtol=1e-9, atol=1e-12)
+    np.testing.assert_allclose(flipped.T_el, res.T_el, rtol=1e-9, atol=1e-12)
+
+
+def test_control_perpendicular_to_excitation_raises(synthetic_results):
+    d, test, res, truth = synthetic_results
+    dirs = test.channel_dirs.copy()
+    dirs[test.control] = [1.0, 0.0, 0.0]
+    with pytest.raises(ValueError, match="Control direction"):
+        run(dataclasses.replace(test, channel_dirs=dirs), df=1.25)
+
+
+def _write_small_test(d, time_text: str, meta: dict | None = None, bom: str = "") -> None:
+    import json
+
+    d.mkdir()
+    (d / "time.csv").write_text(bom + time_text, encoding="utf-8")
+    (d / "geometry.csv").write_text(bom + "node,x,y,z,base\n1,0,0,0,TRUE\n2,1,0,0,0\n\n", encoding="utf-8")
+    (d / "channels.csv").write_text(bom + "channel,node,direction,role\nC,1,+Z,control\nA,2,+Z\n", encoding="utf-8")
+    if meta is not None:
+        (d / "test.json").write_text(json.dumps(meta), encoding="utf-8")
+
+
+def test_fs_from_rounded_time_column(tmp_path):
+    fs = 5120.0
+    rows = "\n".join(f"{i / fs:.6f},{np.sin(i)},{np.cos(i)}" for i in range(4000))
+    _write_small_test(tmp_path / "t", "time,C,A\n" + rows + "\n")
+    assert load_test(tmp_path / "t").fs == pytest.approx(fs, rel=1e-5)
+
+
+def test_test_json_fs_wins_over_time_file(tmp_path):
+    rows = "\n".join(f"{i / 1000:.6f},{np.sin(i)},{np.cos(i)}" for i in range(100))
+    _write_small_test(tmp_path / "t", "time,C,A\n" + rows + "\n", meta={"fs": 2000})
+    assert load_test(tmp_path / "t").fs == 2000.0
+
+
+def test_csv_with_bom_short_rows_and_case(tmp_path):
+    rows = "\n".join(f"{np.sin(i)},{np.cos(i)}" for i in range(100))
+    _write_small_test(tmp_path / "t", "C,A\n" + rows + "\n", meta={"fs": 100}, bom="﻿")
+    t = load_test(tmp_path / "t")  # BOM on every file, blank line in geometry, short channels row
+    assert t.channel_names == ["C", "A"]
+    assert t.node_is_base.tolist() == [True, False]  # base=TRUE accepted, as in MATLAB
+
+
+def test_duplicate_channel_rows_raise(tmp_path):
+    rows = "\n".join(f"{np.sin(i)},{np.cos(i)}" for i in range(100))
+    _write_small_test(tmp_path / "t", "C,A\n" + rows + "\n", meta={"fs": 100})
+    with open(tmp_path / "t" / "channels.csv", "a", encoding="utf-8") as fh:
+        fh.write("A,1,+X,response\n")
+    with pytest.raises(ValueError, match="Duplicate channel"):
+        load_test(tmp_path / "t")
 
 
 def test_export_with_no_peaks(synthetic_results, tmp_path):
