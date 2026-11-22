@@ -15,6 +15,16 @@ function res = runPipeline(test, opts)
 
     nfft = 2 ^ ceil(log2(test.fs / df));
     sp = ods.computeSpectra(test.data, test.control, test.fs, nfft);
+    % H1 is referenced to what the control reads, (d_ctrl . e) * table acceleration. Rescale
+    % so T is per unit table acceleration along e; otherwise an inverted (-Z) or skewed
+    % control breaks the relative view and the base-node motion.
+    gain = test.channelDirs(test.control, :) * test.excitation(:);
+    if abs(gain) < 0.5
+        error('ods:runPipeline', ['Control direction is %.0f deg from the excitation axis; ' ...
+            'check its direction in channels.csv and excitation_axis in test.json'], ...
+            acosd(min(1, abs(gain))));
+    end
+    sp.T = sp.T / gain;
     Trel = ods.relativeTransmissibility(sp.T, test.channelDirs, test.excitation);
     Trel(:, test.control) = 0;   % the control is the reference: zero relative motion
     resp = test.responses;

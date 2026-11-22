@@ -60,9 +60,9 @@ u(f) = T_view(f) · g₀ / (−ω²)        [m per g]  → reported in mm per g 
 
 A peak indicator is formed as the channel norm of the absolute transmissibility, ‖T(f)‖ = √Σ|Tᵢ|². With a single reference this plays the role of a CMIF. Peaks are found with `scipy.signal.find_peaks` and must pass four gates:
 
-- inside `[fmin, fmax]`;
+- inside `[fmin, fmax]` (the search runs on the whole curve and out-of-band peaks are dropped afterwards, so a band edge on a slope is never reported as a peak);
 - prominence ≥ `--prominence` dB;
-- at least 3 Hz from the previous peak;
+- at least 3 Hz from any higher peak (within 3 Hz only the highest survives);
 - |T|²-weighted coherence ≥ `--min-coh`.
 
 The weighting asks whether the channels that carry the shape are trustworthy. An unweighted mean gets dragged down by quiet channels sitting at their noise floor.
@@ -119,7 +119,7 @@ The base input is complex-Gaussian random with the NAVMAT P-9492 shape [NAVMAT 1
 
 (For the Elastic column, MAC is computed after removing rigid-body motion from the true mode too.) What the table shows:
 
-- Every peak lands within about 1–3 bins of a true mode, offset partly by the bin spacing and the Hann window.
+- Every peak lands within 0.4 % of a true mode (up to about 6 bins at 1.3 kHz), offset partly by the bin spacing, the Hann window and neighbouring modes.
 - Relative is the right view for the rigid-body bounce. Above isolation it collapses to the table floor (MAC ≈ 0), exactly as §2 predicts.
 - Where modes are well separated, the Elastic view matches the true shape with MAC ≥ 0.94.
 - Low MPC flags the peaks where nearby modes mix (77.5, 222.5, 631 Hz), and those also have lower MAC. That's the ODS honestly showing a mix, not an error.

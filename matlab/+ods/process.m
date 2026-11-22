@@ -11,7 +11,7 @@ function res = process(testDir, outDir, opts)
     test = ods.loadTest(testDir);
     res = ods.runPipeline(test, opts);
     files = ods.exportResults(res, outDir);
-    [~, name] = fileparts(testDir);
+    [~, name] = fileparts(regexprep(char(testDir), '[\\/]+$', ''));   % trailing separator would give ''
     if isfield(opts, 'title') && ~isempty(opts.title), name = opts.title; end
     files{end + 1} = ods.buildViewer(res, fullfile(outDir, 'ods_viewer.html'), name);
 

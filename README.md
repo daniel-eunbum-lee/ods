@@ -13,7 +13,7 @@ What it does:
 - **Automatic peak picking**, gated on coherence, plus an MPC readout that flags mixed or complex shapes.
 - **A standalone HTML viewer** in one shareable file with no dependencies. It animates the 3D shape, and you can click any frequency on the spectrum.
 - **Report-ready outputs**: CSVs (transmissibility, coherence, ASD, per-peak shapes in mm/g) and an NPZ of everything.
-- **Validated** on a synthetic shaker test with known modes: peaks within about 1 bin of the true frequencies, and MAC up to 0.999 ([details](docs/method.md#validation)).
+- **Validated** on a synthetic shaker test with known modes: peaks within 0.4 % of the true frequencies, and MAC up to 0.999 ([details](docs/method.md#validation)).
 
 ## Quick start
 

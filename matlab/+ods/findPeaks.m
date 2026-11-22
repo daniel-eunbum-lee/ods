@@ -22,8 +22,10 @@ function peaks = findPeaks(f, T, coh, band, prominenceDb, minCoh, minSpacingHz)
     power = abs(T) .^ 2;
     indDb = 20 * log10(max(sqrt(sum(power, 2)), 1e-12));
     inBand = f >= band(1) & f <= band(2);
+    % Search the whole curve and keep in-band peaks afterwards (the inBand test below).
+    % Masking out-of-band bins to -Inf would turn a band edge on a falling/rising slope
+    % into a fake local maximum with infinite prominence.
     x = indDb;
-    x(~inBand) = -Inf;
     df = f(2) - f(1);
     distance = max(1, round(minSpacingHz / df));
 

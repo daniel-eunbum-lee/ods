@@ -20,7 +20,7 @@ CSV headers are case-insensitive, and surrounding spaces are trimmed.
 
 | Key | Default if missing | Notes |
 |---|---|---|
-| `fs` | from the CSV `time` column, or from `fs` inside the NPZ | Sample rate in Hz |
+| `fs` | `fs` inside the MAT/NPZ, or from the CSV `time` column ((N−1)/time span) | Sample rate in Hz. If given here it always wins over the time file |
 | `units` | `"g"` | Acceleration units. `"g"` is converted with g₀ = 9.80665 m/s² for displacement; anything else is treated as m/s² |
 | `excitation_axis` | the control channel's direction | `"X"`, `"Y"` or `"Z"`, in global axes |
 | `time_file` | first of `time.npz`, `time.mat`, `time.csv` that exists (MATLAB: `time.mat`, `time.csv`) | |

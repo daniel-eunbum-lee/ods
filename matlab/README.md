@@ -55,7 +55,7 @@ These are the same as the Python version, except that `ods_results.mat` replaces
 | Function | Purpose |
 |---|---|
 | `ods.process` | Test folder → all outputs (the twin of `ods run`) |
-| `ods.loadTest` | Read a test folder |
+| `ods.loadTest`, `ods.readCsv`, `ods.splitCsvLine` | Read a test folder; small quote-aware CSV reader |
 | `ods.computeSpectra` | Welch ASDs, H1 transmissibility, coherence |
 | `ods.runPipeline` | Spectra → relative/elastic views → peaks |
 | `ods.findPeaks` | Coherence-gated peak picking (reproduces `scipy.signal.find_peaks`) |
@@ -73,8 +73,8 @@ Every function has `help` text, e.g. `help ods.computeSpectra`. The method is de
 addpath('matlab/tests'); run_tests
 ```
 
-This runs 13 tests:
-- analytic SDOF H1, units, MPC/MAC, rigid-body removal, node projection, direction parsing, plateau peaks;
+This runs 15 tests:
+- analytic SDOF H1, units, MPC/MAC, rigid-body removal, node projection, direction parsing, plateau and band-edge peaks, CSV quoting;
 - the synthetic model;
 - **parity with Python** on `tests/fixtures/parity` (T, coherence, ASDs, elastic view and peaks must match to ~1e-9);
 - an end-to-end synthetic run with MAC thresholds.

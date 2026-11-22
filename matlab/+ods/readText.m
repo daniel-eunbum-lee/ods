@@ -6,4 +6,10 @@ function txt = readText(path)
     end
     cleaner = onCleanup(@() fclose(fid));
     txt = fread(fid, Inf, '*char')';
+    % Excel's "CSV UTF-8" starts with a byte-order mark; drop it so the first header matches.
+    if ~isempty(txt) && double(txt(1)) == 65279
+        txt = txt(2:end);
+    elseif numel(txt) >= 3 && isequal(double(txt(1:3)), [239 187 191])   % BOM read as bytes
+        txt = txt(4:end);
+    end
 end

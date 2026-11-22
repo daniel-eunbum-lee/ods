@@ -61,11 +61,16 @@ function test = loadTest(testDir)
         chRoles = repmat({'response'}, numel(chNames), 1);
     end
 
+    [uniq, firstIdx] = unique(chNames);
+    if numel(uniq) < numel(chNames)
+        dup = chNames(setdiff(1:numel(chNames), firstIdx));
+        error('ods:loadTest', 'Duplicate channel in channels.csv: %s', dup{1});
+    end
     [found, loc] = ismember(names, chNames);
     if ~all(found)
         error('ods:loadTest', 'Channels in time data but not in channels.csv: %s', strjoin(names(~found), ', '));
     end
-    missingNodes = setdiff(chNodes(loc), nodeIds);
+    missingNodes = setdiff(chNodes, nodeIds);
     if ~isempty(missingNodes)
         error('ods:loadTest', 'channels.csv references nodes missing from geometry.csv: %s', mat2str(missingNodes'));
     end
@@ -122,7 +127,7 @@ end
 
 function [data, names, fs] = loadTime(path, fsMeta)
     [~, ~, ext] = fileparts(path);
-    fs = fsMeta;
+    fsFile = [];
     switch lower(ext)
         case '.mat'
             s = load(path);
@@ -130,17 +135,23 @@ function [data, names, fs] = loadTime(path, fsMeta)
             names = s.channels;
             if ischar(names), names = cellstr(names); end
             names = strtrim(names(:)');
-            if isfield(s, 'fs'), fs = double(s.fs); end
+            if isfield(s, 'fs'), fsFile = double(s.fs); end
         case '.csv'
-            fid = fopen(path, 'r');
+            fid = fopen(path, 'r', 'n', 'UTF-8');   % header line only: the file may be large
             header = fgetl(fid);
             fclose(fid);
-            names = strtrim(strsplit(header, ','));
+            if ~isempty(header) && double(header(1)) == 65279   % Excel "CSV UTF-8" BOM
+                header = header(2:end);
+            end
+            names = ods.splitCsvLine(header);
             data = dlmread(path, ',', 1, 0);
             data = data(:, 1:numel(names));  % dlmread can pad a trailing empty column
             if strcmpi(names{1}, 'time')
-                if isempty(fs)
-                    fs = 1 / median(diff(data(:, 1)));
+                % Span over count, not 1/median(diff): printed times are rounded, so the
+                % individual steps are quantised and the median step can be off.
+                t = data(:, 1);
+                if numel(t) > 1 && t(end) > t(1)
+                    fsFile = (numel(t) - 1) / (t(end) - t(1));
                 end
                 data = data(:, 2:end);
                 names = names(2:end);
@@ -148,6 +159,9 @@ function [data, names, fs] = loadTime(path, fsMeta)
         otherwise
             error('ods:loadTest', 'Unsupported time file %s (use .mat or .csv)', path);
     end
+    % test.json wins, so a user can correct a wrong rate without rewriting the time file.
+    fs = fsMeta;
+    if isempty(fs), fs = fsFile; end
     if isempty(fs)
         error('ods:loadTest', 'Sample rate unknown: put "fs" in test.json or a "time" column in the CSV');
     end

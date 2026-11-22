@@ -174,6 +174,7 @@ tbody tr { cursor: pointer; }
 <script>
 "use strict";
 const D = JSON.parse(document.getElementById("ods-data").textContent);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const NF = D.f.length, NCH = D.ch.length;
 const G0 = 9.80665;
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -408,8 +409,9 @@ function drawTriad(ctx, w, h) {
 
 // ---------- spectrum plots ----------
 const PAD = { l: 52, r: 12, t: 8, b: 22 };
-const fLo = Math.max(D.f[0], D.meta.band[0] * 0.8), fHi = D.f[NF - 1];
-const kLo = D.f.findIndex(f => f >= fLo);
+// The x axis is logarithmic: start at the first positive bin, or log10(0) = -Infinity hangs niceLogTicks.
+const kLo = Math.max(0, D.f.findIndex(f => f > 0 && f >= D.meta.band[0] * 0.8));
+const fLo = D.f[kLo], fHi = D.f[NF - 1];
 function xOf(f, w) { return PAD.l + (Math.log10(f) - Math.log10(fLo)) / (Math.log10(fHi) - Math.log10(fLo)) * (w - PAD.l - PAD.r); }
 function fOfX(x, w) { return 10 ** (Math.log10(fLo) + (x - PAD.l) / (w - PAD.l - PAD.r) * (Math.log10(fHi) - Math.log10(fLo))); }
 function kOfF(f) { let best = kLo, bd = Infinity; for (let k = kLo; k < NF; k++) { const d = Math.abs(D.f[k] - f); if (d < bd) { bd = d; best = k; } } return best; }
@@ -511,7 +513,7 @@ function bindPlot(ovId, tipId, tipText) {
   });
 }
 bindPlot("specOv", "specTip", (k) => `<b>${fmtHz(D.f[k])}</b> · norm ${curves().norm[k].toFixed(1)} dB` +
-  (S.selCh >= 0 ? ` · ${D.ch[S.selCh].name} ${curves().ch[resp.indexOf(S.selCh)][k].toFixed(1)} dB` : ""));
+  (S.selCh >= 0 ? ` · ${esc(D.ch[S.selCh].name)} ${curves().ch[resp.indexOf(S.selCh)][k].toFixed(1)} dB` : ""));
 bindPlot("cohOv", "cohTip", (k) => `<b>${fmtHz(D.f[k])}</b> · mean ${meanCoh[k].toFixed(3)} · min ${minCoh[k].toFixed(3)}`);
 
 // ---------- readouts, table, peaks ----------
@@ -536,7 +538,7 @@ function updateTable() {
     const [ar, ai] = chanT(S.k, c, "abs"), [vr, vi] = chanT(S.k, c, S.mode);
     const ph = Math.atan2(vi, vr) * 180 / Math.PI;
     const coh = D.coh[c][S.k];
-    return `<tr data-c="${c}" class="${c === S.selCh ? "sel" : ""}"><td>${ch.name}${c === D.meta.control ? " (control)" : ""}</td><td>${ch.node}</td><td>${dirLabel(ch.dir)}</td>` +
+    return `<tr data-c="${c}" class="${c === S.selCh ? "sel" : ""}"><td>${esc(ch.name)}${c === D.meta.control ? " (control)" : ""}</td><td>${ch.node}</td><td>${dirLabel(ch.dir)}</td>` +
       `<td>${Math.hypot(ar, ai).toPrecision(3)}</td><td>${Math.hypot(vr, vi).toPrecision(3)}</td><td>${ph.toFixed(1)}</td>` +
       `<td>${(Math.hypot(vr, vi) * Math.abs(sc)).toPrecision(3)}</td><td class="${coh < 0.8 ? "lowcoh" : ""}">${coh.toFixed(3)}</td></tr>`;
   }).join("");

@@ -12,12 +12,12 @@ function tbl = readCsv(path)
     if isempty(lines)
         error('ods:readCsv', 'Empty CSV file: %s', path);
     end
-    tbl.header = lower(strtrim(strsplit(lines{1}, ',')));
+    tbl.header = lower(ods.splitCsvLine(lines{1}));
     nc = numel(tbl.header);
     nr = numel(lines) - 1;
     tbl.cells = repmat({''}, nr, nc);
     for r = 1:nr
-        parts = strtrim(strsplit(lines{r + 1}, ','));
+        parts = ods.splitCsvLine(lines{r + 1});
         n = min(nc, numel(parts));
         tbl.cells(r, 1:n) = parts(1:n);
     end

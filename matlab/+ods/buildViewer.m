@@ -103,8 +103,10 @@ function s = mat(M, fmt)
 end
 
 function s = jstr(txt)
+    txt = char(txt);   % a string-class title would otherwise make ['"' txt '"'] a string array
     txt = strrep(txt, '\', '\\');
     txt = strrep(txt, '"', '\"');
+    txt = regexprep(txt, '[\x00-\x1F]', ' ');   % raw control characters are invalid in JSON
     s = ['"' txt '"'];
 end
 

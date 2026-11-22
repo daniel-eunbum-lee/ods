@@ -8,7 +8,8 @@ function run_tests()
     addpath(fullfile(here, '..'));
     tests = {@testSdofH1, @testSpectraErrors, @testRelativeTransmissibility, @testDisplacementUnits, ...
         @testMpcMac, @testRigidBodyProjector, @testNodeProjectors, @testParseDirection, ...
-        @testFindPeaksPlateau, @testSynthModel, @testModalTransmissibility, ...
+        @testFindPeaksPlateau, @testFindPeaksBandEdge, @testSplitCsvLine, ...
+        @testSynthModel, @testModalTransmissibility, ...
         @testParityWithPython, @testEndToEndSynthetic};
     nFail = 0;
     for i = 1:numel(tests)
@@ -36,8 +37,13 @@ function check(cond, msg, varargin)
 end
 
 function checkClose(a, b, rtol, atol, what)
+    check(numel(a) == numel(b), '%s: %d vs %d elements', what, numel(a), numel(b));
+    bad = find(isnan(a(:)) ~= isnan(b(:)), 1);   % max() skips NaN, so check it explicitly
+    check(isempty(bad), '%s: element %d is NaN in only one input', what, bad);
     err = abs(a(:) - b(:));
+    err(isnan(err)) = 0;                          % NaN in both: treat as equal
     tol = atol + rtol * abs(b(:));
+    if isempty(err), return; end
     [worst, i] = max(err - tol);
     check(worst <= 0, '%s: element %d differs by %.3g (tol %.3g)', what, i, err(i), tol(i));
 end
@@ -140,6 +146,20 @@ function testFindPeaksPlateau()
     check(numel(peaks) == 1 && peaks(1).index == 41, 'plateau peak index');
 end
 
+function testFindPeaksBandEdge()
+    % A curve falling across the band edge must not report a peak at the first in-band bin.
+    f = (0:199)';
+    x = -0.2 * f; x(120:122) = x(120:122) + [6; 12; 6];   % bump centred on f = 120 Hz
+    T = 10 .^ (x / 20);
+    peaks = ods.findPeaks(f, T, ones(200, 1), [60 199], 3, 0.5, 1);
+    check(numel(peaks) == 1 && peaks(1).f == 120, 'band-edge peaks: %s', mat2str([peaks.f]));
+end
+
+function testSplitCsvLine()
+    p = ods.splitCsvLine(' a , "b,c" ,"say ""hi""",');
+    check(isequal(p, {'a', 'b,c', 'say "hi"', ''}), 'splitCsvLine: %s', strjoin(p, '|'));
+end
+
 % ------------------------------------------------------------------ synthetic model
 
 function testSynthModel()
@@ -172,11 +192,14 @@ function testParityWithPython()
     checkClose(res.sp.T, ex.T, 1e-9, 1e-12, 'T');
     checkClose(res.sp.coh, ex.coh, 0, 1e-9, 'coherence');
     checkClose(res.sp.Gxx, ex.Gxx, 1e-9, 0, 'Gxx');
+    checkClose(res.sp.Gbb, ex.Gbb(:), 1e-9, 0, 'Gbb');
     checkClose(res.Trel, ex.T_rel, 1e-9, 1e-12, 'T_rel');
     checkClose(res.Tel, ex.T_el, 1e-7, 1e-10, 'T_el');
     checkClose(res.rigidR, ex.rigid_R, 0, 1e-9, 'rigid_R');
+    checkClose(res.dispEl, ex.disp_el, 1e-7, 1e-10, 'disp_el');
     check(isequal([res.peaks.index], ex.peak_index(:)'), 'peak bins %s vs %s', ...
         mat2str([res.peaks.index]), mat2str(ex.peak_index(:)'));
+    checkClose([res.peaks.f], ex.peak_f(:)', 1e-12, 0, 'peak f');
     checkClose([res.peaks.mpc], ex.peak_mpc(:)', 1e-7, 1e-9, 'peak MPC');
     checkClose([res.peaks.coh], ex.peak_coh(:)', 1e-9, 1e-12, 'peak coherence');
 end

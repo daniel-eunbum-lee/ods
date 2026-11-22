@@ -31,7 +31,12 @@ function animateShape(res, freq, mode, cycles)
     hl = plot3(ax, [X0(la, 1) X0(lb, 1)]', [X0(la, 2) X0(lb, 2)]', [X0(la, 3) X0(lb, 3)]', '-', ...
         'Color', [0.16 0.47 0.84], 'LineWidth', 2);
     hn = scatter3(ax, X0(:, 1), X0(:, 2), X0(:, 3), 36, mag / max(umax, eps), 'filled');
-    colormap(ax, parula); caxis(ax, [0 1]);
+    try
+        colormap(ax, parula);   % not in GNU Octave
+    catch
+        colormap(ax, jet);
+    end
+    caxis(ax, [0 1]);
     if any(~measured)
         plot3(ax, X0(~measured, 1), X0(~measured, 2), X0(~measured, 3), 'kx');
     end
