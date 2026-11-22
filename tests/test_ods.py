@@ -222,12 +222,18 @@ def test_matlab_parity_fixture_is_current():
     fx = Path(__file__).parents[1] / "matlab" / "tests" / "fixtures" / "parity"
     ex = scipy.io.loadmat(fx / "expected.mat")
     res = run(load_test(fx), df=float(ex["df"].squeeze()), band=tuple(ex["band"].ravel()))
-    np.testing.assert_allclose(res.spectra.T, ex["T"], rtol=1e-12, atol=1e-15)
-    np.testing.assert_allclose(res.T_el, ex["T_el"], rtol=1e-12, atol=1e-15)
-    np.testing.assert_allclose(res.spectra.coh, ex["coh"], rtol=0, atol=1e-12)
-    np.testing.assert_allclose(res.spectra.Gxx, ex["Gxx"], rtol=1e-12, atol=0)
-    np.testing.assert_allclose(res.rigid_R, ex["rigid_R"], rtol=0, atol=1e-12)
-    np.testing.assert_allclose(res.disp_el, ex["disp_el"], rtol=1e-12, atol=1e-15)
+    # Tolerances are relative to each array's full scale, not per element: the fixture is
+    # bit-exact only on the machine that wrote it, and other BLAS builds (CI runners) differ
+    # by ~1e-14 in small elements left over after the rigid-body subtraction.
+    def close(actual, desired):
+        np.testing.assert_allclose(actual, desired, rtol=1e-10, atol=1e-12 * np.abs(desired).max())
+
+    close(res.spectra.T, ex["T"])
+    close(res.T_el, ex["T_el"])
+    close(res.spectra.coh, ex["coh"])
+    close(res.spectra.Gxx, ex["Gxx"])
+    close(res.rigid_R, ex["rigid_R"])
+    close(res.disp_el, ex["disp_el"])
     assert [p.index + 1 for p in res.peaks] == ex["peak_index"].ravel().astype(int).tolist()
 
 

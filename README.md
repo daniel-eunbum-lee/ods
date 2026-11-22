@@ -1,6 +1,6 @@
 # ods
 
-[![tests](https://github.com/daniel-eunbum-lee/ods/actions/workflows/tests.yml/badge.svg)](https://github.com/daniel-eunbum-lee/ods/actions/workflows/tests.yml)
+[![tests](https://github.com/daniel-eunbum-lee/ods/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/daniel-eunbum-lee/ods/actions/workflows/tests.yml)
 
 **Operating deflection shapes (ODS) from shaker random-vibration tests.** Point it at your acceleration time histories, sensor geometry and control channel, and see how the unit actually moved at each resonance.
 
