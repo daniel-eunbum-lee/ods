@@ -1,5 +1,7 @@
 # ods
 
+[![tests](https://github.com/daniel-eunbum-lee/ods/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/daniel-eunbum-lee/ods/actions/workflows/tests.yml)
+
 **Operating deflection shapes (ODS) from shaker random-vibration tests.** Point it at your acceleration time histories, sensor geometry and control channel, and see how the unit actually moved at each resonance.
 
 ![ODS viewer: top-panel mode of a box on isolators](docs/images/viewer-shape.jpg)
@@ -104,6 +106,8 @@ docs/            guides, screenshots, demo viewer
 ```powershell
 uv run pytest
 ```
+
+GitHub Actions runs the same suite on every push to main and every pull request (Python 3.11 and 3.14 on Linux, 3.14 on Windows; see [`.github/workflows/tests.yml`](.github/workflows/tests.yml)). The MATLAB tests are not run in CI.
 
 [PLAN.md](PLAN.md) records the design decisions made during the initial build.
 
