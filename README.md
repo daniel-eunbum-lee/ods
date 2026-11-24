@@ -1,6 +1,14 @@
 # ods
 
-[![tests](https://github.com/daniel-eunbum-lee/ods/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/daniel-eunbum-lee/ods/actions/workflows/tests.yml)
+[![Python tests](https://github.com/daniel-eunbum-lee/ods/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/daniel-eunbum-lee/ods/actions/workflows/tests.yml)
+[![MATLAB tests](https://github.com/daniel-eunbum-lee/ods/actions/workflows/matlab.yml/badge.svg?branch=main)](https://github.com/daniel-eunbum-lee/ods/actions/workflows/matlab.yml)
+[![Python coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fdaniel-eunbum-lee%2Fods%2Fbadges%2Fpython-coverage.json)](https://github.com/daniel-eunbum-lee/ods/actions/workflows/badges.yml)
+[![MATLAB coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fdaniel-eunbum-lee%2Fods%2Fbadges%2Fmatlab-coverage.json)](https://github.com/daniel-eunbum-lee/ods/actions/workflows/matlab.yml)
+[![License: MIT](https://img.shields.io/github/license/daniel-eunbum-lee/ods)](LICENSE)
+![Python 3.11 | 3.14](https://img.shields.io/badge/python-3.11%20%7C%203.14-blue)
+![MATLAB latest and GNU Octave 7+](https://img.shields.io/badge/MATLAB-latest%20%C2%B7%20Octave%207%2B-orange)
+![Python tested on Linux and Windows](https://img.shields.io/badge/Python%20tested%20on-Linux%20%C2%B7%20Windows-lightgrey)
+[![Cite](https://img.shields.io/badge/cite-CITATION.cff-informational)](CITATION.cff)
 
 **Operating deflection shapes (ODS) from shaker random-vibration tests.** Point it at your acceleration time histories, sensor geometry and control channel, and see how the unit actually moved at each resonance.
 

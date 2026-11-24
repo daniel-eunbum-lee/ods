@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- The policy allows only the script below, by its SHA-256. After editing that script, update the hash
+     (python/tests/test_input_safety.py::test_viewer_csp_allows_only_its_own_script prints the new one). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-usK3BYPG0yrsPFwvNmVFx78vI9O6gWwcD3MUDWk3rfQ='; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ODS Viewer</title>
 <style>

@@ -19,6 +19,31 @@ def _rounded(a: np.ndarray, sig: int = 5) -> list[float]:
     return [float(f"{v:.{sig}g}") for v in np.asarray(a, dtype=float)]
 
 
+def _finite(obj):
+    """Replace NaN/inf with 0 throughout: JSON has no NaN, and one would blank the whole viewer.
+
+    The MATLAB builder writes 0 for non-finite numbers too.
+    """
+    if isinstance(obj, float):
+        return obj if np.isfinite(obj) else 0.0
+    if isinstance(obj, dict):
+        return {k: _finite(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_finite(v) for v in obj]
+    return obj
+
+
+def embed_json(data: dict) -> str:
+    """JSON that is safe inside <script type="application/json">.
+
+    Escaping every < (not only </) also stops "<!--<script" in a channel name from switching the
+    HTML parser into a state where the page's own </script> no longer ends the data block.
+    \\u003c etc. are ordinary JSON escapes, so JSON.parse returns the original text.
+    """
+    text = json.dumps(_finite(data), separators=(",", ":"), allow_nan=False)
+    return text.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
+
+
 def build_viewer(res: Results, out_path: Path, title: str = "Shaker test") -> Path:
     t, sp = res.test, res.spectra
     keep = (sp.f >= res.band[0] * 0.8) & (sp.f <= res.band[1])
@@ -63,8 +88,9 @@ def build_viewer(res: Results, out_path: Path, title: str = "Shaker test") -> Pa
             if idx_map[p.index] >= 0
         ],
     }
-    payload = json.dumps(data, separators=(",", ":")).replace("</", "<\\/")
-    html = _TEMPLATE.read_text(encoding="utf-8").replace("/*__ODS_DATA__*/", payload)
+    # read_text turns any CRLF into LF and newline="\n" keeps it that way on Windows: the page's
+    # Content-Security-Policy allows its script by a hash of the exact (LF) script text.
+    html = _TEMPLATE.read_text(encoding="utf-8").replace("/*__ODS_DATA__*/", embed_json(data))
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(html, encoding="utf-8")
+    out_path.write_text(html, encoding="utf-8", newline="\n")
     return out_path

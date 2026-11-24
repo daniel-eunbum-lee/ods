@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "ods: transmissibility-based operating deflection shapes from shaker tests"
+type: software
+authors:
+  - family-names: Lee
+    given-names: Daniel Eunbum
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/daniel-eunbum-lee/ods"
+abstract: >-
+  Operating deflection shapes (ODS) from shaker random-vibration tests, computed from H1
+  transmissibility against the control accelerometer, with coherence, three views of the motion
+  (absolute, relative to the table, elastic), peak picking, and a standalone interactive viewer.
+  Implemented in Python and in MATLAB, checked against an exact cantilever-beam solution.
+keywords:
+  - operating deflection shape
+  - transmissibility
+  - shaker test
+  - random vibration
+  - structural dynamics

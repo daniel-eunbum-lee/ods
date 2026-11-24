@@ -16,8 +16,20 @@ dependencies = [
 ods = "ods.__main__:main"
 
 [build-system]
-requires = ["hatchling"]
+# Pinned: uv builds this package in every CI job, and build dependencies are not in uv.lock, so an
+# unpinned backend would run whatever was newest on PyPI that day. Update these by hand, then `uv lock`.
+requires = ["hatchling==1.33.0"]
 build-backend = "hatchling.build"
+
+[tool.uv]
+# hatchling's own dependencies, pinned for the same reason (uv applies these to the build only).
+build-constraint-dependencies = [
+    "packaging==26.4",
+    "pathspec==1.1.1",
+    "pluggy==1.7.0",
+    "tomlkit==0.15.3",
+    "trove-classifiers==2026.9.21.13",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ods"]

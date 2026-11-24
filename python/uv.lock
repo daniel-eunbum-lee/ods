@@ -6,6 +6,15 @@ resolution-markers = [
     "python_full_version < '3.12'",
 ]
 
+[manifest]
+build-constraints = [
+    { name = "packaging", specifier = "==26.4" },
+    { name = "pathspec", specifier = "==1.1.1" },
+    { name = "pluggy", specifier = "==1.7.0" },
+    { name = "tomlkit", specifier = "==0.15.3" },
+    { name = "trove-classifiers", specifier = "==2026.9.21.13" },
+]
+
 [[package]]
 name = "colorama"
 version = "0.4.6"

@@ -1,0 +1,53 @@
+name: badges
+
+# Keeps the Python coverage badge in the README current. On every push to main it re-runs the
+# Python tests with coverage and writes the percentage to a small JSON file on the `badges`
+# branch, which shields.io renders. No external service or secret is involved. (The MATLAB
+# coverage badge is published by the MATLAB job in matlab.yml.)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: badges
+  cancel-in-progress: false
+
+jobs:
+  python-coverage:
+    name: Python coverage badge
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # only to update the `badges` branch
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      # Actions are pinned to commit SHAs; the comment gives the release.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.9" # same pin as tests.yml
+          python-version: "3.14"
+          enable-cache: true
+
+      - name: Install (exactly as locked)
+        run: uv sync --locked
+
+      - name: Run tests with coverage
+        run: uv run pytest -q --cov --cov-report=xml:"$RUNNER_TEMP/coverage.xml"
+
+      - name: Publish Python coverage badge
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 ../.github/scripts/coverage_badge.py "$RUNNER_TEMP/coverage.xml" "coverage (Python)" "$RUNNER_TEMP/python-coverage.json"
+          bash ../.github/scripts/publish_badge.sh "$RUNNER_TEMP/python-coverage.json"

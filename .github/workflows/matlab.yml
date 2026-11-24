@@ -37,13 +37,26 @@ jobs:
           octave-cli --version | head -1
 
       - name: Run the MATLAB test suite
-        run: octave-cli --no-gui --quiet --eval "addpath('matlab/tests'); run_tests"
+        env:
+          ODS_TEST_OUT: ${{ runner.temp }}/ods-octave
+        run: octave-cli --no-gui --quiet --eval "addpath('matlab/tests'); run_all_tests"
+
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: matlab-octave-report
+          path: ${{ runner.temp }}/ods-octave
+          retention-days: 90
+          if-no-files-found: error
 
   matlab:
     name: MATLAB tests (MATLAB, ubuntu-latest)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     continue-on-error: true # see the header comment
+    permissions:
+      contents: write # only to update the `badges` branch, and only on pushes to main (see the last step)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -52,10 +65,30 @@ jobs:
       - uses: matlab-actions/setup-matlab@f9e43010f1ae678f7cfa0542fe2a4f60f7d1ad8d # v3.1.0
 
       - uses: matlab-actions/run-command@bfa857648f4895aa98a446fe41c85e0788421ed5 # v3.3.0
+        env:
+          ODS_TEST_OUT: ${{ runner.temp }}/ods-matlab
         with:
-          command: cd matlab; buildtool test # runs buildfile.m, which runs run_tests
+          command: cd matlab; buildtool test # runs buildfile.m, which runs run_all_tests
+
+      - name: Upload test results and coverage
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: matlab-report
+          path: ${{ runner.temp }}/ods-matlab
+          retention-days: 90
+          if-no-files-found: error
 
       # continue-on-error hides a failure from the PR checks, so say it where people look.
       - name: Report a MATLAB failure
         if: failure()
         run: echo "::warning title=MATLAB tests failed::The MATLAB job failed; it is not a required check. See this job's log." && echo "MATLAB tests FAILED (non-blocking job); see the log of this job." >> "$GITHUB_STEP_SUMMARY"
+
+      # Coverage badge for the README: only from the default branch, never from a pull request.
+      - name: Publish MATLAB coverage badge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 .github/scripts/coverage_badge.py "$RUNNER_TEMP/ods-matlab/coverage.xml" "coverage (MATLAB)" "$RUNNER_TEMP/matlab-coverage.json"
+          bash .github/scripts/publish_badge.sh "$RUNNER_TEMP/matlab-coverage.json"
