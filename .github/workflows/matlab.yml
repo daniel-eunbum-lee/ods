@@ -1,0 +1,61 @@
+name: matlab
+
+# The MATLAB port is tested with the same shared cases (testdata/) as the Python version.
+# - Octave: free, always available; a regression gate for the MATLAB code.
+# - MATLAB: real MATLAB through MathWorks' action (public repositories). Not blocking: if
+#   MATLAB cannot be set up (licensing, outage) the run is not failed by it.
+# Neither job is a required status check on `main` unless the ruleset is changed to require it.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  octave:
+    name: MATLAB tests (Octave, ubuntu-latest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Actions are pinned to commit SHAs; the comment gives the release.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Octave
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends octave
+          octave-cli --version | head -1
+
+      - name: Run the MATLAB test suite
+        run: octave-cli --no-gui --quiet --eval "addpath('matlab/tests'); run_tests"
+
+  matlab:
+    name: MATLAB tests (MATLAB, ubuntu-latest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true # see the header comment
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: matlab-actions/setup-matlab@f9e43010f1ae678f7cfa0542fe2a4f60f7d1ad8d # v3.1.0
+
+      - uses: matlab-actions/run-command@bfa857648f4895aa98a446fe41c85e0788421ed5 # v3.3.0
+        with:
+          command: cd matlab; buildtool test # runs buildfile.m, which runs run_tests
+
+      # continue-on-error hides a failure from the PR checks, so say it where people look.
+      - name: Report a MATLAB failure
+        if: failure()
+        run: echo "::warning title=MATLAB tests failed::The MATLAB job failed; it is not a required check. See this job's log." && echo "MATLAB tests FAILED (non-blocking job); see the log of this job." >> "$GITHUB_STEP_SUMMARY"

@@ -26,8 +26,10 @@ git clone https://github.com/daniel-eunbum-lee/ods.git
 ```
 
 ```powershell
-cd ods
+cd ods/python
 ```
+
+The Python tool lives in `python/`; run the `uv` commands below from that folder.
 
 ```powershell
 uv sync
@@ -67,8 +69,8 @@ Start from the templates in [`examples/template/`](examples/template/).
 A MATLAB version lives in [`matlab/`](matlab/). It reads the same test folders, writes the same outputs and viewer, and needs no toolboxes:
 
 ```matlab
-run('matlab/run_demo.m')                              % synthetic demo
-res = ods.process('my_test_z', 'results/my_test_z');  % your data (after addpath matlab)
+run('matlab/toolbox/examples/run_demo.m')             % synthetic demo
+res = ods.process('my_test_z', 'results/my_test_z');  % your data (after addpath matlab/toolbox)
 ```
 
 See [matlab/README.md](matlab/README.md).
@@ -86,28 +88,44 @@ See [matlab/README.md](matlab/README.md).
 
 ## Project layout
 
+One repository, two implementations of the same tool, tested against the same shared cases:
+
 ```
-src/ods/
-  io.py          load test folders (CSV/NPZ + geometry)
-  spectra.py     Welch H1 transmissibility, coherence, ASDs
-  shapes.py      relative/elastic transforms, displacement, peak picking, MPC, MAC
-  pipeline.py    run() and export()
-  viewer.py      builds the HTML viewer from viewer_template.html
-  synth.py       synthetic box-on-isolators shaker test with known modes
-  __main__.py    `ods synth` / `ods run` command line
-tests/           pytest suite (analytic SDOF and cantilever benchmarks + end-to-end synthetic validation)
-matlab/          MATLAB version: +ods package, run_demo.m, tests (incl. parity with Python)
-examples/        test-folder templates
-docs/            guides, screenshots, demo viewer
+python/                  Python implementation (pyproject.toml, uv.lock)
+  src/ods/
+    io.py                load test folders (CSV/NPZ + geometry)
+    spectra.py           Welch H1 transmissibility, coherence, ASDs
+    shapes.py            relative/elastic transforms, displacement, peak picking, MPC, MAC
+    pipeline.py          run() and export()
+    viewer.py            builds the HTML viewer from viewer_template.html
+    synth.py             synthetic box-on-isolators shaker test with known modes
+    __main__.py          `ods synth` / `ods run` command line
+  tests/                 pytest suite (analytic benchmarks, unit tests, shared-case runner)
+matlab/                  MATLAB implementation
+  toolbox/               what a MATLAB user installs: +ods package, resources/, examples/
+  tests/run_tests.m      MATLAB/Octave suite (unit tests + shared-case runner)
+  buildfile.m            tasks for MATLAB's `buildtool`
+testdata/                SHARED by both: cases/*.json (specs + tolerances), data/, generate/
+examples/                test-folder templates (same files for both languages)
+docs/                    guides, screenshots, demo viewer (apply to both languages)
 ```
+
+See [`testdata/README.md`](testdata/README.md) for the shared-test format.
 
 ## Development
 
 ```powershell
+cd python
 uv run pytest
 ```
 
-GitHub Actions runs the same suite on every push to main and every pull request (Python 3.11 and 3.14 on Linux, 3.14 on Windows; see [`.github/workflows/tests.yml`](.github/workflows/tests.yml)). The MATLAB tests are not run in CI.
+MATLAB (or GNU Octave), from the repository root:
+
+```matlab
+addpath('matlab/tests'); run_tests
+```
+
+GitHub Actions runs the Python suite on every push to main and every pull request (Python 3.11 and 3.14 on Linux, 3.14 on Windows; see [`.github/workflows/tests.yml`](.github/workflows/tests.yml)), and the MATLAB suite on GNU Octave and, where MathWorks' action can set it up, on MATLAB itself ([`.github/workflows/matlab.yml`](.github/workflows/matlab.yml)). Both run the shared cases in `testdata/`.
 
 [PLAN.md](PLAN.md) records the design decisions made during the initial build.
 

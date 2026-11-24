@@ -1,17 +1,17 @@
 function run_tests()
 %RUN_TESTS Test suite for the MATLAB ODS port (works in MATLAB and GNU Octave).
-%   From the repository root:   addpath matlab/tests; run_tests
+%   From the repository root:   addpath matlab/tests; run_tests   (or: cd matlab; buildtool test)
 %   Uses plain asserts (no matlab.unittest) so Octave can run it too. Includes a parity
 %   test against results produced by the Python implementation on the same data
-%   (fixtures/parity, regenerate with `uv run python matlab/tests/make_parity_fixture.py`).
+%   (testdata/data/parity, regenerate with `cd python && uv run python ../testdata/generate/make_parity_fixture.py`).
     here = fileparts(mfilename('fullpath'));
-    addpath(fullfile(here, '..'));
+    addpath(fullfile(here, '..', 'toolbox'));
     tests = {@testSdofH1, @testSpectraErrors, @testRelativeTransmissibility, @testDisplacementUnits, ...
         @testMpcMac, @testRigidBodyProjector, @testNodeProjectors, @testParseDirection, ...
         @testFindPeaksPlateau, @testFindPeaksBandEdge, @testSplitCsvLine, @testSkewedControl, ...
         @testExcitationAxis, ...
         @testSynthModel, @testModalTransmissibility, ...
-        @testParityWithPython, @testEndToEndSynthetic};
+        @testSharedCases, @testEndToEndSynthetic};
     nFail = 0;
     for i = 1:numel(tests)
         name = func2str(tests{i});
@@ -185,7 +185,7 @@ end
 function testSkewedControl()
     % A control tilted to read g = +/-0.8 of the table must give the same views (issue #12).
     here = fileparts(mfilename('fullpath'));
-    test = ods.loadTest(fullfile(here, 'fixtures', 'parity'));
+    test = ods.loadTest(fullfile(here, '..', '..', 'testdata', 'data', 'parity'));
     opts = struct('df', 4, 'band', [20 450]);
     base = ods.runPipeline(test, opts);
     resp = test.responses;
@@ -206,7 +206,7 @@ function testExcitationAxis()
     % Signed axes are accepted; anything else must raise instead of silently using the control's direction.
     here = fileparts(mfilename('fullpath'));
     d = tempname();
-    copyfile(fullfile(here, 'fixtures', 'parity'), d);
+    copyfile(fullfile(here, '..', '..', 'testdata', 'data', 'parity'), d);
     cleaner = onCleanup(@() rmdir(d, 's'));
     good = {'"-z"', [0 0 -1]; '"+Z"', [0 0 1]; '" z "', [0 0 1]; 'null', [0 0 1]};   % null = not set -> control's +Z
     for i = 1:size(good, 1)
@@ -232,27 +232,48 @@ function writeJson(d, axisJson)
     fclose(fid);
 end
 
-function testParityWithPython()
+function testSharedCases()
+    % Runs every language-neutral case in testdata/cases (the Python runner reads the same files).
+    % Comparison rule, per element: |actual - expected| <= atol + atol_fullscale*max|expected| + rtol*|expected|.
     here = fileparts(mfilename('fullpath'));
-    fx = fullfile(here, 'fixtures', 'parity');
-    ex = load(fullfile(fx, 'expected.mat'));
-    test = ods.loadTest(fx);
-    res = ods.runPipeline(test, struct('df', ex.df, 'band', ex.band(:)'));
-    check(res.sp.nfft == ex.nfft && res.sp.nAvg == ex.n_avg, 'nfft/averages');
-    checkClose(res.sp.f, ex.f(:), 1e-12, 0, 'f');
-    checkClose(res.sp.T, ex.T, 1e-9, 1e-12, 'T');
-    checkClose(res.sp.coh, ex.coh, 0, 1e-9, 'coherence');
-    checkClose(res.sp.Gxx, ex.Gxx, 1e-9, 0, 'Gxx');
-    checkClose(res.sp.Gbb, ex.Gbb(:), 1e-9, 0, 'Gbb');
-    checkClose(res.Trel, ex.T_rel, 1e-9, 1e-12, 'T_rel');
-    checkClose(res.Tel, ex.T_el, 1e-7, 1e-10, 'T_el');
-    checkClose(res.rigidR, ex.rigid_R, 0, 1e-9, 'rigid_R');
-    checkClose(res.dispEl, ex.disp_el, 1e-7, 1e-10, 'disp_el');
-    check(isequal([res.peaks.index], ex.peak_index(:)'), 'peak bins %s vs %s', ...
-        mat2str([res.peaks.index]), mat2str(ex.peak_index(:)'));
-    checkClose([res.peaks.f], ex.peak_f(:)', 1e-12, 0, 'peak f');
-    checkClose([res.peaks.mpc], ex.peak_mpc(:)', 1e-7, 1e-9, 'peak MPC');
-    checkClose([res.peaks.coh], ex.peak_coh(:)', 1e-9, 1e-12, 'peak coherence');
+    root = fullfile(here, '..', '..', 'testdata');
+    files = dir(fullfile(root, 'cases', '*.json'));
+    check(~isempty(files), 'no shared cases found in %s', root);
+    for k = 1:numel(files)
+        spec = jsondecode(ods.readText(fullfile(root, 'cases', files(k).name)));
+        check(strcmp(spec.id, files(k).name(1:end-5)), '%s: id must equal the file name', files(k).name);
+        check(~isempty(spec.checks), '%s: a case with no checks would pass vacuously', spec.id);
+        golden = load(fullfile(root, spec.expected));
+        test = ods.loadTest(fullfile(root, spec.input));
+        res = ods.runPipeline(test, struct('df', spec.options.df, 'band', spec.options.band(:)'));
+        actual = sharedActuals(res);
+        for c = 1:numel(spec.checks)
+            ch = spec.checks(c);
+            check(isfield(actual, ch.quantity), '%s: runner does not expose quantity %s', spec.id, ch.quantity);
+            e = double(golden.(ch.quantity)(:));
+            atol = ch.atol + ch.atol_fullscale * max([abs(e(~isnan(e))); 0]);
+            checkClose(double(actual.(ch.quantity)(:)), e, ch.rtol, atol, [spec.id ':' ch.quantity]);
+        end
+    end
+end
+
+function a = sharedActuals(res)
+    % The quantities a case may check, under the names used in the golden files.
+    a.f = res.sp.f;
+    a.T = res.sp.T;
+    a.coh = res.sp.coh;
+    a.Gbb = res.sp.Gbb;
+    a.Gxx = res.sp.Gxx;
+    a.T_rel = res.Trel;
+    a.T_el = res.Tel;
+    a.disp_el = res.dispEl;
+    a.rigid_R = res.rigidR;
+    a.nfft = res.sp.nfft;
+    a.n_avg = res.sp.nAvg;
+    a.peak_index = [res.peaks.index];
+    a.peak_f = [res.peaks.f];
+    a.peak_mpc = [res.peaks.mpc];
+    a.peak_coh = [res.peaks.coh];
 end
 
 function testEndToEndSynthetic()

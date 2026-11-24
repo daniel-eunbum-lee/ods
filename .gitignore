@@ -8,9 +8,15 @@ dist/
 .pytest_cache/
 
 # Generated test data and results (regenerate with `ods synth` / `ods run`)
-data/
-outputs/
-results/
+# anchored, so testdata/data/ (committed shared test data) is not ignored
+/data/
+/outputs/
+/results/
+/python/data/
+/python/outputs/
+/python/results/
+/matlab/data/
+/matlab/outputs/
 
 # Local tool config
 .claude/
@@ -24,4 +30,5 @@ Thumbs.db
 
 # CI/local test evidence
 evidence/
+htmlcov/
 .coverage

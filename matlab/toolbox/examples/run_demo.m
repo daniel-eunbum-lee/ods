@@ -1,12 +1,13 @@
 %RUN_DEMO Synthetic shaker test -> ODS -> viewer, end to end in MATLAB.
-%   Run from anywhere:  run('matlab/run_demo.m')   (or cd matlab; run_demo)
+%   Run from anywhere:  run('matlab/toolbox/examples/run_demo.m')
 %   Takes a few seconds; writes matlab/data/synthetic and matlab/outputs.
 
 here = fileparts(mfilename('fullpath'));
-addpath(here);
+addpath(fullfile(here, '..'));  % the toolbox folder, which holds +ods
 
-dataDir = fullfile(here, 'data', 'synthetic');
-outDir = fullfile(here, 'outputs');
+matlabDir = fullfile(here, '..', '..');
+dataDir = fullfile(matlabDir, 'data', 'synthetic');
+outDir = fullfile(matlabDir, 'outputs');
 
 model = ods.synthBoxModel();
 sim = ods.synthSimulate(model, 'Z', 5120, 60, 1);

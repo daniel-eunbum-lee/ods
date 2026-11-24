@@ -28,7 +28,9 @@ A reviewer finding is the agent's report, not the user's approval of anything.
 - The `main` ruleset requires a PR and the checks named exactly `Python 3.11 (ubuntu-latest)`,
   `Python 3.14 (ubuntu-latest)` and `Python 3.14 (windows-latest)`. Do not rename the job or matrix
   in `.github/workflows/tests.yml`.
-- Package manager is `uv` (pinned in CI); keep `uv.lock` changes minimal and keep its `revision` line.
+- Layout: `python/` (package, `pyproject.toml`, `uv.lock`, tests), `matlab/` (`toolbox/` is what users install, `tests/`), and `testdata/` shared by both. Run `uv` commands from `python/`.
+- Shared language-neutral test cases live in `testdata/cases/` (see `testdata/README.md`).
+- Package manager is `uv` (pinned in CI); keep `python/uv.lock` changes minimal and keep its `revision` line.
 - Quality gates and the SQA approach are described in `docs/sqa.md`; update its traceability table
   when behaviour changes.
 - Text files use LF (`.gitattributes`). Commit messages follow conventional commits.

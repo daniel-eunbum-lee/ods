@@ -10,10 +10,10 @@ ASME V&V 10, NASA-STD-8739.8 and *Good Enough Practices in Scientific Computing*
 
 | Level | What | Where |
 |---|---|---|
-| Code verification, exact reference | The pipeline is run on a simulated test whose exact answer is known in closed form (uniform Euler-Bernoulli cantilever on a shaker). The reference formula is itself checked three ways first, so an error in it cannot hide behind the pipeline. | `tests/test_benchmark_cantilever.py` |
+| Code verification, exact reference | The pipeline is run on a simulated test whose exact answer is known in closed form (uniform Euler-Bernoulli cantilever on a shaker). The reference formula is itself checked three ways first, so an error in it cannot hide behind the pipeline. | `python/tests/test_benchmark_cantilever.py` |
 | Code verification, estimation theory | The measured H1 error is compared with the random error that Bendat & Piersol predict, which catches wrong scaling, window or averaging conventions. | same file, `test_random_error_matches_theory` |
-| Unit tests | Spectral estimation, projections, unit conversions, MAC/MPC, parsing, input validation, export. | `tests/test_ods.py` |
-| Cross-implementation check | The MATLAB port is compared with the Python results on a frozen fixture. | `test_matlab_parity_fixture_is_current`, `matlab/tests/` |
+| Unit tests | Spectral estimation, projections, unit conversions, MAC/MPC, parsing, input validation, export. | `python/tests/test_ods.py` |
+| Cross-implementation check | The Python and MATLAB versions run the **same language-neutral cases** (`testdata/cases/*.json`: input, options, golden outputs, per-quantity tolerances) through one thin runner each. The current golden file comes from the Python pipeline, so this detects drift between the two implementations, not which one is wrong. | `python/tests/test_shared_cases.py`, `testSharedCases` in `matlab/tests/run_tests.m` |
 | Validation against measurements | **Not yet done.** The benchmark and the synthetic box model are simulations. No real shaker data set is used. | gap, see section 6 |
 
 Where a tolerance is derived, the derivation is stated beside the assertion (for most benchmark
@@ -39,6 +39,7 @@ zipped with a SHA-256 file, to the release. That is the permanent record of a re
 To reproduce a run locally:
 
 ```
+cd python
 uv sync --locked
 ODS_EVIDENCE_DIR=evidence uv run pytest -ra --junitxml=evidence/junit.xml --cov
 ```
@@ -69,8 +70,9 @@ ODS_EVIDENCE_DIR=evidence uv run pytest -ra --junitxml=evidence/junit.xml --cov
 | R6 | Input files (NPZ, CSV, `test.json`) are read correctly and malformed input is rejected | `test_csv_input_matches_npz`, `test_csv_with_bom_short_rows_and_case`, `test_duplicate_channel_rows_raise`, `test_fs_from_rounded_time_column`, `test_test_json_fs_wins_over_time_file` |
 | R7 | Exported tables and the HTML viewer carry the right numbers | `test_export_and_viewer`, `test_export_with_no_peaks` (export and viewer survive an empty peak list), `test_viewer_reports_table_rms_for_skewed_control`, `test_exported_transmissibility_csv_matches_exact` |
 | R8 | The full pipeline reproduces an exact analytical solution within stated tolerances | `test_reference_frequency_equation_matches_blevins`, `test_reference_matches_direct_boundary_value_solve`, `test_reference_static_limit_and_modal_sum`, `test_transmissibility_matches_exact_away_from_resonance`, `test_random_error_matches_theory`, `test_ods_at_each_peak_matches_exact_shape` |
-| R9 | The Python output matches the frozen fixture that the MATLAB port is tested against (MATLAB itself is not run in CI) | `test_matlab_parity_fixture_is_current` |
+| R9 | The Python and MATLAB versions give the same results on the shared cases, within each stated tolerance (Python: pytest; MATLAB: Octave in CI, and MATLAB where available) | `test_shared_case` (one per check; `test_cases_are_present`, `test_case_specs_are_well_formed` guard the spec), `testSharedCases` (MATLAB) |
 | R10 | The synthetic test generator is well posed, its modal formula matches an SDOF reference, and it matches its stated input level | `test_box_model_is_well_posed`, `test_modal_transmissibility_matches_sdof`, `test_input_level_matches_profile` |
+| R11 | Files that must exist twice (the MATLAB toolbox must be self-contained; a Python build cannot reach the repo root) stay identical | `test_matlab_viewer_template_matches_python`, `test_python_license_copy_matches_root` |
 
 When behaviour is added or changed, update this table in the same pull request.
 
@@ -82,8 +84,9 @@ was wrong and what results it could have affected (for example PR #13, a control
 ## 6. Known gaps
 
 - No validation against real measured data (section 1).
-- `src/ods/__main__.py` (the command line) has no tests: 0 % coverage.
-- The MATLAB tests (`matlab/tests/`) are not run by CI; only the parity fixture is checked from Python.
+- `python/src/ods/__main__.py` (the command line) has no tests: 0 % coverage.
+- The MATLAB suite runs in CI on GNU Octave (a different implementation of the language) and on real MATLAB (the latest release; R2026b at first run, including `buildtool test`) in a non-blocking job, because its set-up depends on MathWorks' action and licensing. Neither CI job is a required check on `main` unless the ruleset is changed. The analytic cantilever benchmark is Python-only: it needs a 60 s noise record (~22 MB) that is generated, not stored.
+- MATLAB/Octave results are not part of the CI evidence artifacts or the release evidence bundle: the plain-assert MATLAB suite produces no JUnit or coverage output, and `release-evidence.yml` reuses only `tests.yml`.
 - `ruff format` is not enforced (it would reformat 7 files), and `zip()` without `strict=` is
   allowed (8 places): both are left for separate changes.
 - No independent code review (single maintainer).

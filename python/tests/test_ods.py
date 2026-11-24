@@ -213,28 +213,25 @@ def test_csv_input_matches_npz(tmp_path):
     np.testing.assert_allclose(c.data, a.data, rtol=0, atol=0)
 
 
-def test_matlab_parity_fixture_is_current():
-    """matlab/tests/run_tests.m compares MATLAB against this fixture; it must match Python now."""
+def test_matlab_viewer_template_matches_python():
+    """The self-contained MATLAB toolbox carries its own copy of the viewer template; they must not drift."""
     from pathlib import Path
 
-    import scipy.io
+    root = Path(__file__).parents[2]
+    copy = root / "matlab" / "toolbox" / "resources" / "viewer_template.html"
+    if not copy.exists():  # e.g. tests run from an sdist that does not include the MATLAB folder
+        pytest.skip("MATLAB toolbox not present")
+    assert copy.read_bytes() == (root / "python" / "src" / "ods" / "viewer_template.html").read_bytes()
 
-    fx = Path(__file__).parents[1] / "matlab" / "tests" / "fixtures" / "parity"
-    ex = scipy.io.loadmat(fx / "expected.mat")
-    res = run(load_test(fx), df=float(ex["df"].squeeze()), band=tuple(ex["band"].ravel()))
-    # Tolerances are relative to each array's full scale, not per element: the fixture is
-    # bit-exact only on the machine that wrote it, and other BLAS builds (CI runners) differ
-    # by ~1e-14 in small elements left over after the rigid-body subtraction.
-    def close(actual, desired):
-        np.testing.assert_allclose(actual, desired, rtol=1e-10, atol=1e-12 * np.abs(desired).max())
 
-    close(res.spectra.T, ex["T"])
-    close(res.T_el, ex["T_el"])
-    close(res.spectra.coh, ex["coh"])
-    close(res.spectra.Gxx, ex["Gxx"])
-    close(res.rigid_R, ex["rigid_R"])
-    close(res.disp_el, ex["disp_el"])
-    assert [p.index + 1 for p in res.peaks] == ex["peak_index"].ravel().astype(int).tolist()
+def test_python_license_copy_matches_root():
+    """python/ ships its own LICENSE (a build cannot reach the parent folder); it must equal the root one."""
+    from pathlib import Path
+
+    root = Path(__file__).parents[2]
+    if not (root / "LICENSE").exists():
+        pytest.skip("repository root not present")
+    assert (root / "python" / "LICENSE").read_bytes() == (root / "LICENSE").read_bytes()
 
 
 # ---------------------------------------------------------------- regressions from code review
