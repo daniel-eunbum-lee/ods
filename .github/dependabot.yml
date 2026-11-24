@@ -1,0 +1,25 @@
+# Weekly update PRs for the SHA-pinned GitHub Actions and the uv-locked Python dependencies.
+# Security updates for known vulnerabilities come as soon as an advisory is published, regardless
+# of this schedule (Dependabot alerts are enabled on the repository).
+# Every PR runs the normal CI, and the main ruleset requires it to pass before merging.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: uv
+    directory: /python
+    schedule:
+      interval: weekly
+    groups:
+      python:
+        patterns: ["*"]
+    commit-message:
+      prefix: build
