@@ -25,7 +25,29 @@ packages = ["src/ods"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
+[tool.coverage.run]
+source = ["ods"]
+branch = true
+
+[tool.coverage.report]
+# Floor set below the measured baseline (82 % with branches, 2026-11-24) so it catches a real
+# drop without failing on platform noise. Raise it as coverage improves; never lower it silently.
+fail_under = 78
+show_missing = true
+
+[tool.ruff]
+line-length = 150  # matches the code base (max 146); used by `ruff format` only, since E501 is not selected
+target-version = "py311"
+
+[tool.ruff.lint]
+# Bug-finding rules only (syntax errors, undefined names, unused imports, likely bugs); style is not gated.
+select = ["E4", "E7", "E9", "F", "B"]
+# B905 (zip without strict=) has 8 existing hits; adding strict= changes runtime behaviour, so it is a separate change.
+ignore = ["B905"]
+
 [dependency-groups]
 dev = [
     "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.6",
 ]
