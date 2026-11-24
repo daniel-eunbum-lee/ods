@@ -61,6 +61,21 @@ def run(
     return Results(test, sp, T_rel, T_el, disp, disp_el, R, peaks, band)
 
 
+def csv_cell(text: str) -> str:
+    """One CSV field from user text (a channel name or units), safe to open in a spreadsheet.
+
+    A leading = + - @ (or tab / CR) makes Excel and LibreOffice evaluate the cell as a formula,
+    so it gets a ' prefix (the OWASP recommendation). A comma, quote or line break would shift
+    the columns, so such a field is quoted as in RFC 4180.
+    """
+    text = str(text)
+    if text[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        text = "'" + text
+    if any(ch in text for ch in ',"\r\n'):
+        text = '"' + text.replace('"', '""') + '"'
+    return text
+
+
 def export(res: Results, out_dir: Path) -> list[Path]:
     """Write NPZ (everything) + CSVs (spectra and per-peak shapes). Returns written paths."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -100,7 +115,7 @@ def export(res: Results, out_dir: Path) -> list[Path]:
     f = sp.f[keep]
 
     def _table(path: Path, header: list[str], cols: list[np.ndarray]) -> None:
-        np.savetxt(path, np.column_stack(cols), delimiter=",", header=",".join(header), comments="", fmt="%.6g")
+        np.savetxt(path, np.column_stack(cols), delimiter=",", header=",".join(map(csv_cell, header)), comments="", fmt="%.6g", encoding="utf-8")
         written.append(path)
 
     _table(
@@ -113,11 +128,15 @@ def export(res: Results, out_dir: Path) -> list[Path]:
     _table(out_dir / "asd.csv", ["f_hz"] + [f"{n}_{unit2}" for n in names], [f, sp.Gxx[keep]])
 
     p = out_dir / "ods_peaks.csv"
-    with open(p, "w") as fh:
-        fh.write(
-            "peak,f_hz,mpc_abs,channel,node,dx,dy,dz,T_mag,T_phase_deg,T_rel_mag,T_rel_phase_deg,"
-            f"disp_rel_mm_per_{t.units},disp_rel_phase_deg,disp_elastic_mm_per_{t.units},disp_elastic_phase_deg,coherence\n"
-        )
+    with open(p, "w", encoding="utf-8") as fh:
+        header = "peak,f_hz,mpc_abs,channel,node,dx,dy,dz,T_mag,T_phase_deg,T_rel_mag,T_rel_phase_deg".split(",") + [
+            f"disp_rel_mm_per_{t.units}",
+            "disp_rel_phase_deg",
+            f"disp_elastic_mm_per_{t.units}",
+            "disp_elastic_phase_deg",
+            "coherence",
+        ]
+        fh.write(",".join(map(csv_cell, header)) + "\n")
 
         def _mp(z: complex) -> str:
             return f"{abs(z):.6g},{np.degrees(np.angle(z)):.2f}"
@@ -127,7 +146,7 @@ def export(res: Results, out_dir: Path) -> list[Path]:
             for c in t.responses:
                 dx, dy, dz = t.channel_dirs[c]
                 fh.write(
-                    f"{i},{pk.f:.3f},{pk.mpc:.3f},{names[c]},{t.channel_nodes[c]},{dx:g},{dy:g},{dz:g},"
+                    f"{i},{pk.f:.3f},{pk.mpc:.3f},{csv_cell(names[c])},{t.channel_nodes[c]},{dx:g},{dy:g},{dz:g},"
                     f"{_mp(sp.T[k, c])},{_mp(res.T_rel[k, c])},{_mp(res.disp[k, c])},{_mp(res.disp_el[k, c])},"
                     f"{sp.coh[k, c]:.4f}\n"
                 )

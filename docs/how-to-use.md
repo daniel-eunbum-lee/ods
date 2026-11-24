@@ -159,6 +159,8 @@ r["peak_f"], r["peak_shapes_mm_per_unit"], r["peak_shapes_elastic_mm_per_unit"]
 r["channels"], r["channel_nodes"], r["channel_dirs"], r["rigid_R"]
 ```
 
+The CSV files are UTF-8. Text taken from your input (channel names, units) is written so a spreadsheet shows it as text: a name starting with `=`, `+`, `-` or `@` gets a leading `'` (otherwise Excel would run it as a formula), and a name containing a comma or quote is quoted. The viewer escapes the same text and only runs its own script (it carries a Content-Security-Policy), so a test folder from someone else can't put markup or script in it.
+
 Displacements are **per unit of table acceleration**, e.g. mm per g. To estimate the actual response amplitude at a peak, multiply by the input level at that frequency.
 
 ## 6. Tuning options

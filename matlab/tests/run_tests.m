@@ -9,7 +9,7 @@ function run_tests()
     tests = {@testSdofH1, @testSpectraErrors, @testRelativeTransmissibility, @testDisplacementUnits, ...
         @testMpcMac, @testRigidBodyProjector, @testNodeProjectors, @testParseDirection, ...
         @testFindPeaksPlateau, @testFindPeaksBandEdge, @testSplitCsvLine, @testSkewedControl, ...
-        @testExcitationAxis, ...
+        @testExcitationAxis, @testUntrustedInput, @testSafeOutput, ...
         @testSynthModel, @testModalTransmissibility, ...
         @testSharedCases, @testEndToEndSynthetic};
     nFail = 0;
@@ -232,6 +232,102 @@ function writeJson(d, axisJson)
     fclose(fid);
 end
 
+function writeTimeFileJson(d, timeFileJson)
+    fid = fopen(fullfile(d, 'test.json'), 'w');
+    fprintf(fid, '{"fs": 1024, "units": "g", "excitation_axis": "Z", "time_file": %s}', timeFileJson);
+    fclose(fid);
+end
+
+function checkLoadFails(d, what, msgPart)
+    threw = false;
+    try
+        ods.loadTest(d);
+    catch err
+        threw = strcmp(err.identifier, 'ods:loadTest') && ~isempty(strfind(err.message, msgPart)); %#ok<STREMP>
+    end
+    check(threw, '%s should be rejected with a message containing "%s"', what, msgPart);
+end
+
+function testUntrustedInput()
+    % A test folder may come from someone else (Python: tests/test_input_safety.py). time_file must
+    % stay inside the folder, the .mat may only hold numeric data/fs and text channels, and the
+    % geometry must be finite.
+    here = fileparts(mfilename('fullpath'));
+    src = fullfile(here, '..', '..', 'testdata', 'data', 'parity');
+    d = tempname();
+    copyfile(src, d);
+    cleaner = onCleanup(@() rmdir(d, 's'));
+    % JSON text, so backslashes are doubled: "\\\\evil..." is the UNC path \\evil...
+    bad = {'"//evil.example/share/time.mat"', '"\\\\evil.example\\share\\time.mat"', '"C:/data/time.mat"', ...
+        '"C:time.mat"', '"/tmp/time.mat"', '"../parity/time.mat"', '"sub\\..\\..\\time.mat"', ...
+        '"secret.txt"', '"time.npz"', '"NUL.mat"', '"sub/con.csv"', '""', '5', 'null'};
+    for k = 1:numel(bad)
+        writeTimeFileJson(d, bad{k});
+        checkLoadFails(d, ['time_file ' bad{k}], 'time_file');
+    end
+    mkdir(fullfile(d, 'raw'));
+    movefile(fullfile(d, 'time.mat'), fullfile(d, 'raw', 'time.mat'));
+    writeTimeFileJson(d, '"raw/time.mat"');
+    t = ods.loadTest(d);
+    check(size(t.data, 2) == 28, 'a time_file in a subfolder loads');
+    movefile(fullfile(d, 'raw', 'time.mat'), fullfile(d, 'time.mat'));
+    writeTimeFileJson(d, '"time.mat"');
+
+    % .mat contents: other variables are ignored, a non-numeric "data" is refused before use
+    s = load(fullfile(src, 'time.mat'));
+    data = s.data; channels = s.channels; fs = s.fs; other = 'never read'; %#ok<NASGU>
+    save(fullfile(d, 'time.mat'), '-v7', 'data', 'channels', 'fs', 'other');
+    ods.loadTest(d);
+    data = num2cell(s.data(1:8, :)); %#ok<NASGU>
+    save(fullfile(d, 'time.mat'), '-v7', 'data', 'channels', 'fs');
+    checkLoadFails(d, 'a cell array as data', 'data');
+    copyfile(fullfile(src, 'time.mat'), fullfile(d, 'time.mat'));
+
+    % non-finite coordinates
+    geo = ods.readText(fullfile(src, 'geometry.csv'));
+    rows = regexp(geo, '\n', 'split');
+    parts = regexp(rows{2}, ',', 'split');
+    parts{2} = 'nan';
+    rows{2} = strjoin(parts, ',');
+    fid = fopen(fullfile(d, 'geometry.csv'), 'w');
+    fprintf(fid, '%s', strjoin(rows, sprintf('\n')));
+    fclose(fid);
+    checkLoadFails(d, 'a nan coordinate', 'non-finite');
+end
+
+function testSafeOutput()
+    % Channel names and units end up in CSV files and the HTML viewer: they must not become
+    % spreadsheet formulas, shift CSV columns, or act as markup (Python: tests/test_input_safety.py).
+    here = fileparts(mfilename('fullpath'));
+    test = ods.loadTest(fullfile(here, '..', '..', 'testdata', 'data', 'parity'));
+    resp = test.responses;
+    test.channelNames{resp(1)} = '=HYPERLINK("x")';
+    test.channelNames{resp(2)} = 'a,b';
+    test.channelNames{resp(3)} = '<!--<script>';
+    res = ods.runPipeline(test, struct('df', 4, 'band', [20 450]));
+    res.test.units = 'g,=x';
+    d = tempname();
+    cleaner = onCleanup(@() rmdir(d, 's'));
+    ods.exportResults(res, d);
+
+    lines = regexp(ods.readText(fullfile(d, 'transmissibility.csv')), '\n', 'split');
+    header = lines{1};
+    check(~isempty(strfind(header, '"''=HYPERLINK(""x"")_mag"')), 'formula name gets a '' prefix and quotes'); %#ok<STREMP>
+    check(~isempty(strfind(header, ',"a,b_mag",')), 'a name with a comma is quoted'); %#ok<STREMP>
+    peaks = regexp(ods.readText(fullfile(d, 'ods_peaks.csv')), '\n', 'split');
+    check(~isempty(strfind(peaks{1}, ',"disp_rel_mm_per_g,=x",')), 'units with a comma are quoted'); %#ok<STREMP>
+
+    html = ods.readText(ods.buildViewer(res, fullfile(d, 'v.html'), '<b>title</b>'));
+    check(~any(html == char(13)), 'viewer written with LF only (its CSP hashes the LF script)');
+    tag = '<script id="ods-data" type="application/json">';
+    i0 = strfind(html, tag) + numel(tag);
+    i1 = strfind(html(i0:end), '</script>');
+    block = html(i0:i0 + i1(1) - 2);
+    check(~any(block == '<') && ~any(block == '>') && ~any(block == '&'), 'no markup characters in the data block');
+    check(~isempty(strfind(block, '\u003c!--\u003cscript\u003e')), 'markup in a name is escaped'); %#ok<STREMP>
+    check(numel(strfind(html, '</script>')) == 2, 'nothing injected after the data block');
+end
+
 function testSharedCases()
     % Runs every language-neutral case in testdata/cases (the Python runner reads the same files).
     % Comparison rule, per element: |actual - expected| <= atol + atol_fullscale*max|expected| + rtol*|expected|.
@@ -307,6 +403,9 @@ function testEndToEndSynthetic()
         end
         check(v > macMin, 'MAC at %.1f Hz = %.3f (< %.2f)', fn, v, macMin);
     end
+    % compareTruth loads only fn/phi/node ids from truth.mat and matches every peak
+    tbl = ods.compareTruth(res, fullfile(d, 'truth.mat'));
+    check(size(tbl, 1) == numel(res.peaks) && all(isfinite(tbl(:))), 'compareTruth table');
     % exports + viewer
     out = fullfile(d, 'out');
     files = ods.exportResults(res, out);

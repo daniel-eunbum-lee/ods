@@ -23,7 +23,7 @@ CSV headers are case-insensitive, and surrounding spaces are trimmed.
 | `fs` | `fs` inside the MAT/NPZ, or from the CSV `time` column ((N−1)/time span) | Sample rate in Hz. If given here it always wins over the time file |
 | `units` | `"g"` | Acceleration units. `"g"` is converted with g₀ = 9.80665 m/s² for displacement; anything else is treated as m/s² |
 | `excitation_axis` | the control channel's direction | `"X"`, `"Y"` or `"Z"` (optionally signed, e.g. `"-Z"`), in global axes. Set it whenever the control isn't mounted along a global axis, so a tilted control is corrected (see [method.md](method.md#2-three-views-of-the-motion)). Any other value is an error |
-| `time_file` | first of `time.npz`, `time.mat`, `time.csv` that exists (MATLAB: `time.mat`, `time.csv`) | |
+| `time_file` | first of `time.npz`, `time.mat`, `time.csv` that exists (MATLAB: `time.mat`, `time.csv`) | A relative path inside the test folder, subfolders allowed (`raw/run3.csv`), ending in `.npz` (Python only), `.mat` or `.csv`. Absolute paths, network (UNC) paths, `..`, Windows device names (`NUL`, `CON`, `COM1`, …) and (Python) links that lead outside the folder are rejected, because a test folder may come from someone else |
 
 ## Time histories
 
@@ -51,6 +51,8 @@ The Python tool can write one: `uv run ods synth --format mat`.
 
 Every channel name must appear in `channels.csv`.
 
+From a MAT file only `data`, `channels` and `fs` are read; `data` and `fs` must be numeric and `channels` text. A time file whose `data`, `channels` and `fs` would take more than 8 GiB in memory (about 10⁹ samples as double) is refused before loading: the size comes from the file's headers (NPZ, MAT) or is estimated from the first lines (CSV). Raise `ods.io.MAX_TIME_DATA_BYTES` (Python) or the limit in `loadTest.m` (MATLAB) if you really need more. (GNU Octave reads a MAT file in full to list it, so there the check comes after reading.)
+
 ## `geometry.csv`
 
 ```
@@ -63,7 +65,7 @@ node,x,y,z,base
 | Column | Notes |
 |---|---|
 | `node` | Integer id |
-| `x, y, z` | Global coordinates. Any length unit works as long as it's consistent; it only affects the drawing and the rigid-body fit |
+| `x, y, z` | Global coordinates, finite numbers. Any length unit works as long as it's consistent; it only affects the drawing and the rigid-body fit |
 | `base` | Optional. `1` marks a shaker-table or fixture point. These are not measured: they are drawn at rest in Relative/Elastic views and moving with the table in Absolute view |
 
 ## `channels.csv`
@@ -105,3 +107,9 @@ These are display-only edges. Lines can include `base` nodes, for example to dra
 | `Bad direction '...'` | Not `±X/Y/Z` and not three numbers |
 | `Sample rate unknown` | No `fs` anywhere and no `time` column |
 | `excitation_axis must be X, Y or Z (optionally signed)` | `excitation_axis` in `test.json` is something else (e.g. `"vertical"` or a number). Use `null` or leave it out to take the control's direction |
+| `time_file must be a relative path inside the test folder` / `must end in ...` / `must not name a Windows device` | `time_file` is absolute, a network path, contains `..`, names a device, or has another extension |
+| `... is a link to a file outside the test folder` | (Python) A file in the folder is a symbolic link to somewhere else |
+| `holds more than one variable named data` | (Python) A MAT file with duplicate variables |
+| `time data would take ... GiB, above the ... limit` | The time file declares more data than the memory limit (see [Time histories](#time-histories)) |
+| `geometry.csv has non-finite coordinates` (MATLAB: `non-numeric or non-finite values`) | A coordinate is `nan` or `inf`; in MATLAB also a node id or coordinate that is not a number |
+| `variable "..." has class ...` (MATLAB also: `"data" and "fs" must be numeric`) | A MAT file holds something other than numbers in `data`/`fs` or text (cell or char) in `channels` |

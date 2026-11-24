@@ -65,11 +65,17 @@ function outPath = buildViewer(res, outPath, title)
         ',"rigidR":' mat(round(res.rigidR * 1e8) / 1e8, '%.8g'), ...
         ',"proj":{' strjoin(projParts, ',') '}', ...
         ',"peaks":[' strjoin(pkParts, ',') ']}'];
-    json = strrep(json, '</', '<\/');
+    % Escape every < (not only </): "<!--<script" in a name would otherwise switch the HTML parser
+    % into a state where the page's own </script> no longer ends the data block. \u003c etc. are
+    % plain JSON escapes, so JSON.parse returns the original text. (Same as Python's embed_json.)
+    json = strrep(strrep(strrep(json, '&', '\u0026'), '<', '\u003c'), '>', '\u003e');
 
     here = fileparts(mfilename('fullpath'));
     template = fullfile(here, '..', 'resources', 'viewer_template.html');
-    html = strrep(ods.readText(template), '/*__ODS_DATA__*/', json);
+    % The page's Content-Security-Policy allows its script by a hash of the exact LF text, so a
+    % template checked out with CRLF line endings must be written back with LF.
+    template = strrep(ods.readText(template), sprintf('\r\n'), sprintf('\n'));
+    html = strrep(template, '/*__ODS_DATA__*/', json);
 
     outDir = fileparts(outPath);
     if ~isempty(outDir) && ~exist(outDir, 'dir'), mkdir(outDir); end

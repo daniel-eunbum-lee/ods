@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .io import load_test
+from .io import _check_size, _in_folder, load_test, npz_bytes
 from .pipeline import export, run
 from .shapes import mac
 from .viewer import build_viewer
@@ -31,6 +31,8 @@ def _cmd_synth(a: argparse.Namespace) -> None:
 
 def _compare_truth(res, truth_path: Path) -> None:
     """Match each ODS peak to the nearest true mode and report MAC on measured DOFs."""
+    # truth.npz is picked up from the test folder automatically: same size guard as the time file.
+    _check_size(npz_bytes(truth_path, ("node_ids", "fn", "phi"), numeric="phi"), truth_path)
     tr = np.load(truth_path)
     t = res.test
     node_index = {int(n): i for i, n in enumerate(tr["node_ids"])}
@@ -63,7 +65,7 @@ def _cmd_run(a: argparse.Namespace) -> None:
     print(f"{len(res.peaks)} peaks: " + ", ".join(f"{p.f:.1f}" for p in res.peaks) + " Hz")
     for f in files + [viewer]:
         print(f"  wrote {f}")
-    truth = Path(a.test_dir) / "truth.npz"
+    truth = _in_folder(Path(a.test_dir), "truth.npz")
     if truth.exists():
         _compare_truth(res, truth)
 

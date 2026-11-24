@@ -77,8 +77,9 @@ Every function has `help` text, e.g. `help ods.computeSpectra`. The method is de
 addpath('matlab/tests'); run_tests
 ```
 
-Or, in MATLAB (R2022b+), from the `matlab` folder: `buildtool test`. GNU Octave has no `buildtool`. This runs 17 tests:
+Or, in MATLAB (R2022b+), from the `matlab` folder: `buildtool test`. GNU Octave has no `buildtool`. This runs 19 tests:
 - analytic SDOF H1, units, MPC/MAC, rigid-body removal, node projection, direction parsing, plateau and band-edge peaks, CSV quoting, tilted controls (g = ±0.8), invalid excitation_axis;
+- untrusted input (time_file outside the folder, non-numeric .mat contents, non-finite geometry) and safe output (formula-like and comma names in CSVs, markup in the viewer data);
 - the synthetic model;
 - **the shared cases** in `testdata/cases/` (the same JSON files the Python suite runs: T, coherence, ASDs, elastic view and peaks must match the golden file within each check's stated tolerance);
 - an end-to-end synthetic run with MAC thresholds.
