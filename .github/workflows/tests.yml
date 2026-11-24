@@ -55,9 +55,9 @@ jobs:
           --junitxml=evidence/junit.xml
           --cov --cov-report=term --cov-report=xml:evidence/coverage.xml --cov-report=html:evidence/htmlcov
 
-      # After the tests, and always(), so a lint failure cannot hide the test evidence.
+      # After the tests, and not only on success, so a lint failure cannot hide the test evidence.
       - name: Lint (bug-finding rules; configured in pyproject.toml)
-        if: always()
+        if: ${{ !cancelled() }}
         run: uv run ruff check .
 
       # always(): a failing run is exactly the one whose evidence matters.

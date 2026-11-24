@@ -17,7 +17,7 @@ ASME V&V 10, NASA-STD-8739.8 and *Good Enough Practices in Scientific Computing*
 | Validation against measurements | **Not yet done.** The benchmark and the synthetic box model are simulations. No real shaker data set is used. | gap, see section 6 |
 
 Where a tolerance is derived, the derivation is stated beside the assertion (for most benchmark
-limits: the worst of 82 independent noise seeds, plus margin; a few cite 20 seeds, and some
+limits: the worst of 82 independent noise seeds, plus margin; one cites 20 seeds, and some
 checks have no derivation). By convention, a tolerance is changed only with a stated reason in
 the pull request; this is a working agreement, not an enforced gate.
 
@@ -31,7 +31,7 @@ Each run of the `tests` workflow (Linux Python 3.11 and 3.14, Windows Python 3.1
 | `junit.xml` | Result of every test |
 | `coverage.xml`, `htmlcov/` | Line and branch coverage |
 | `verification_metrics.json` | The main benchmark errors (transmissibility, random-error statistics, peak frequency and coherence, ODS shape and amplitude) next to their limits (value, limit, comparison), so accuracy can be compared between runs and versions, not only pass/fail. Not every assertion is recorded. |
-| `provenance.json` | Commit, run URL, OS, Python, numpy/scipy/pytest versions, SHA-256 of `uv.lock`, UTC time |
+| `provenance.json` | Commit, run URL, OS, Python, numpy/scipy/pytest versions, SHA-256 of `uv.lock`, UTC time. On pull-request runs the commit is GitHub's temporary merge commit, not the branch head; on pushes to `main` and on releases it is the exact commit. |
 
 When a release is published, `release-evidence.yml` re-runs the tests and attaches all of this,
 zipped with a SHA-256 file, to the release. That is the permanent record of a released version.
@@ -54,6 +54,8 @@ ODS_EVIDENCE_DIR=evidence uv run pytest -ra --junitxml=evidence/junit.xml --cov
 - Quality gates in CI: `ruff check` (bug-finding rules, `pyproject.toml`) and a coverage floor
   (`fail_under`, currently 78 % against a measured 82 %).
 - The ruleset requires no approving review (single maintainer): there is **no independent review**.
+  Changes are also gone over by a separate AI reviewer agent (see `CLAUDE.md`). That is a useful
+  check, but it is a practice, not independent review in the SQA sense.
 
 ## 4. Requirements and traceability
 
