@@ -3,10 +3,10 @@
 This is the MATLAB version of the ODS tool. It reads the same test folders, writes the same CSVs, and builds the same interactive HTML viewer as the Python version. It also adds a native MATLAB animation.
 
 - **Base MATLAB only.** No Signal Processing Toolbox is needed: Welch/H1, coherence and peak picking are implemented directly.
-- **Matches the Python version to round-off (verified on GNU Octave; not yet on real MATLAB).** A parity test runs both on the same data.
+- **Matches the Python version to round-off (verified on GNU Octave 7.3 and on MATLAB R2026b in CI; other releases untested).** A parity test runs both on the same data.
 - **Plain syntax** (char/cellstr, no `arguments` blocks), so it should also run in GNU Octave 7+.
 
-> **Status:** The test suite (below) passes under GNU Octave, and CI runs it on Octave for every change and on MATLAB itself where MathWorks' action can set it up (a separate, non-blocking job). The algorithms were also checked against scipy, and the results agree with the Python version on the shared cases in `testdata/`. If you find a failure that is specific to MATLAB, please report it.
+> **Status:** The test suite (below) passes under GNU Octave and under MATLAB R2026b (the latest release when the CI job was first run, pull request #17). CI runs it on Octave and on the latest MATLAB for every change; the MATLAB job is non-blocking because it depends on MathWorks' action and licensing. The algorithms were also checked against scipy, and the results agree with the Python version on the shared cases in `testdata/`. If you find a failure that is specific to MATLAB, please report it.
 
 ## Quick start
 

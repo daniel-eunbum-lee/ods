@@ -85,7 +85,7 @@ was wrong and what results it could have affected (for example PR #13, a control
 
 - No validation against real measured data (section 1).
 - `python/src/ods/__main__.py` (the command line) has no tests: 0 % coverage.
-- The MATLAB suite runs in CI on GNU Octave (a different implementation of the language) and on real MATLAB in a non-blocking job whose set-up depends on MathWorks' action and licensing. Neither CI job is a required check on `main` unless the ruleset is changed. The analytic cantilever benchmark is Python-only: it needs a 60 s noise record (~22 MB) that is generated, not stored.
+- The MATLAB suite runs in CI on GNU Octave (a different implementation of the language) and on real MATLAB (the latest release; R2026b at first run, including `buildtool test`) in a non-blocking job, because its set-up depends on MathWorks' action and licensing. Neither CI job is a required check on `main` unless the ruleset is changed. The analytic cantilever benchmark is Python-only: it needs a 60 s noise record (~22 MB) that is generated, not stored.
 - MATLAB/Octave results are not part of the CI evidence artifacts or the release evidence bundle: the plain-assert MATLAB suite produces no JUnit or coverage output, and `release-evidence.yml` reuses only `tests.yml`.
 - `ruff format` is not enforced (it would reformat 7 files), and `zip()` without `strict=` is
   allowed (8 places): both are left for separate changes.
