@@ -1,6 +1,10 @@
-function run_tests()
+function varargout = run_tests(mode)
 %RUN_TESTS Test suite for the MATLAB ODS port (works in MATLAB and GNU Octave).
 %   From the repository root:   addpath matlab/tests; run_tests   (or: cd matlab; buildtool test)
+%   run_tests()         run everything, print PASS/FAIL per test, error if any test fails
+%   run_tests('names')  return the test names (cell array) without running anything
+%   run_tests(name)     run one test by name and error if it fails
+%   To also save JUnit/coverage reports to a temporary folder, use run_all_tests instead.
 %   Uses plain asserts (no matlab.unittest) so Octave can run it too. Includes a parity
 %   test against results produced by the Python implementation on the same data
 %   (testdata/data/parity, regenerate with `cd python && uv run python ../testdata/generate/make_parity_fixture.py`).
@@ -12,6 +16,19 @@ function run_tests()
         @testExcitationAxis, @testUntrustedInput, @testSafeOutput, ...
         @testSynthModel, @testModalTransmissibility, ...
         @testSharedCases, @testEndToEndSynthetic};
+    names = cellfun(@func2str, tests, 'UniformOutput', false);
+    if nargin > 0
+        if strcmp(mode, 'names')
+            varargout{1} = names;
+            return
+        end
+        k = find(strcmp(names, mode));
+        if isempty(k)
+            error('ods:tests', 'unknown test "%s"', mode);
+        end
+        tests{k}();
+        return
+    end
     nFail = 0;
     for i = 1:numel(tests)
         name = func2str(tests{i});
@@ -30,6 +47,32 @@ function run_tests()
 end
 
 % ------------------------------------------------------------------ helpers
+
+function copyFolderFiles(src, dst)
+    % Copies the files directly inside src (the test folders have no subfolders) into dst.
+    % Not copyfile: GNU Octave's copyfile hands the paths to a shell, so a checkout whose folder
+    % name contains $( ) or a backtick would break or run that text as a command.
+    if ~exist(dst, 'dir')
+        mkdir(dst);
+    end
+    items = dir(src);
+    for i = 1:numel(items)
+        if ~items(i).isdir
+            copyOneFile(fullfile(src, items(i).name), fullfile(dst, items(i).name));
+        end
+    end
+end
+
+function copyOneFile(src, dst)
+    in = fopen(src, 'rb');
+    check(in > 0, 'cannot read %s', src);
+    bytes = fread(in, Inf, '*uint8');
+    fclose(in);
+    out = fopen(dst, 'wb');
+    check(out > 0, 'cannot write %s', dst);
+    fwrite(out, bytes, 'uint8');
+    fclose(out);
+end
 
 function check(cond, msg, varargin)
     if ~cond
@@ -206,7 +249,7 @@ function testExcitationAxis()
     % Signed axes are accepted; anything else must raise instead of silently using the control's direction.
     here = fileparts(mfilename('fullpath'));
     d = tempname();
-    copyfile(fullfile(here, '..', '..', 'testdata', 'data', 'parity'), d);
+    copyFolderFiles(fullfile(here, '..', '..', 'testdata', 'data', 'parity'), d);
     cleaner = onCleanup(@() rmdir(d, 's'));
     good = {'"-z"', [0 0 -1]; '"+Z"', [0 0 1]; '" z "', [0 0 1]; 'null', [0 0 1]};   % null = not set -> control's +Z
     for i = 1:size(good, 1)
@@ -255,7 +298,7 @@ function testUntrustedInput()
     here = fileparts(mfilename('fullpath'));
     src = fullfile(here, '..', '..', 'testdata', 'data', 'parity');
     d = tempname();
-    copyfile(src, d);
+    copyFolderFiles(src, d);
     cleaner = onCleanup(@() rmdir(d, 's'));
     % JSON text, so backslashes are doubled: "\\\\evil..." is the UNC path \\evil...
     bad = {'"//evil.example/share/time.mat"', '"\\\\evil.example\\share\\time.mat"', '"C:/data/time.mat"', ...
@@ -281,7 +324,7 @@ function testUntrustedInput()
     data = num2cell(s.data(1:8, :)); %#ok<NASGU>
     save(fullfile(d, 'time.mat'), '-v7', 'data', 'channels', 'fs');
     checkLoadFails(d, 'a cell array as data', 'data');
-    copyfile(fullfile(src, 'time.mat'), fullfile(d, 'time.mat'));
+    copyOneFile(fullfile(src, 'time.mat'), fullfile(d, 'time.mat'));
 
     % non-finite coordinates
     geo = ods.readText(fullfile(src, 'geometry.csv'));

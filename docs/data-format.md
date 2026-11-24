@@ -2,6 +2,8 @@
 
 One folder holds **one synchronized run** (one test axis). File names are fixed except for the time file, which `test.json` names. A ready-to-edit set is in [`examples/template/`](../examples/template/).
 
+The Python tool refuses any of these files (and `truth.npz`) if it is a link that leads outside the folder, so a symlinked shared `geometry.csv` kept elsewhere must be copied into the folder instead.
+
 | File | Required | Purpose |
 |---|---|---|
 | `test.json` | recommended | Sample rate, units, excitation axis, time-file name |
@@ -51,7 +53,7 @@ The Python tool can write one: `uv run ods synth --format mat`.
 
 Every channel name must appear in `channels.csv`.
 
-From a MAT file only `data`, `channels` and `fs` are read; `data` and `fs` must be numeric and `channels` text. A time file whose `data`, `channels` and `fs` would take more than 8 GiB in memory (about 10⁹ samples as double) is refused before loading: the size comes from the file's headers (NPZ, MAT) or is estimated from the first lines (CSV). Raise `ods.io.MAX_TIME_DATA_BYTES` (Python) or the limit in `loadTest.m` (MATLAB) if you really need more. (GNU Octave reads a MAT file in full to list it, so there the check comes after reading.)
+From a MAT file only `data`, `channels` and `fs` are read; `data` and `fs` must be numeric and `channels` text. A time file whose `data`, `channels` and `fs` would take more than 8 GiB in memory (about 10⁹ samples as double) is refused before loading: the size comes from the file's headers (NPZ, MAT) or is estimated from the first lines (CSV). For a compressed MAT file the size is the one the file *declares*, so a deliberately crafted file can still use more memory than it declares; the limit protects against honest mistakes and oversized files, not against that. Raise `ods.io.MAX_TIME_DATA_BYTES` (Python) or the limit in `loadTest.m` (MATLAB) if you really need more. (GNU Octave reads a MAT file in full to list it, so there the check comes after reading.)
 
 ## `geometry.csv`
 
