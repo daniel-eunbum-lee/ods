@@ -190,7 +190,7 @@ def _in_band(res):
     return k, f[k]
 
 
-def test_transmissibility_matches_exact_away_from_resonance(cantilever):
+def test_transmissibility_matches_exact_away_from_resonance(cantilever, record_metric):
     test, res, _ = cantilever
     k, f = _in_band(res)
     T_meas = res.spectra.T[k][:, test.responses]
@@ -198,6 +198,10 @@ def test_transmissibility_matches_exact_away_from_resonance(cantilever):
     away = ~resonance_mask(f)
     rel = np.abs(T_meas - T_true)[away] / np.abs(T_true)[away]
     phase = np.degrees(np.abs(np.angle(T_meas[away] / T_true[away])))
+    record_metric("transmissibility_rel_error_median", np.median(rel), 1e-3)
+    record_metric("transmissibility_rel_error_p99", np.percentile(rel, 99), 0.012)
+    record_metric("transmissibility_rel_error_max", rel.max(), 0.08)
+    record_metric("transmissibility_phase_error_max", phase.max(), 4.0, units="deg")
     assert np.median(rel) < 1e-3  # 82-seed worst: 0.033 %
     assert np.percentile(rel, 99) < 0.012  # 82-seed worst: 0.66 %
     assert rel.max() < 0.08  # 82-seed worst: 5.8 % (near an antiresonance, where |T| is small)
@@ -205,7 +209,7 @@ def test_transmissibility_matches_exact_away_from_resonance(cantilever):
     np.testing.assert_allclose(res.spectra.T[k][:, test.control], 1.0)  # the control gain is +1 here
 
 
-def test_random_error_matches_theory(cantilever):
+def test_random_error_matches_theory(cantilever, record_metric):
     """Off resonance the H1 error is purely random, of the size Bendat & Piersol predict.
 
     eps = sqrt((1 - coh) / (2 n_avg coh)) is the normalised random error of |H|; the complex
@@ -221,6 +225,10 @@ def test_random_error_matches_theory(cantilever):
     z = np.abs(T_meas - cantilever_T(XI, f)) / (np.sqrt(2) * eps * np.abs(T_meas))
     z = z[~resonance_mask(f)]
     p95, p99 = np.percentile(z, [95, 99])
+    record_metric("normalised_error_p95_upper", p95, 1.95)
+    record_metric("normalised_error_p95_lower", p95, 1.65, op=">")
+    record_metric("normalised_error_p99_upper", p99, 2.50)
+    record_metric("normalised_error_p99_lower", p99, 2.05, op=">")
     # Rayleigh: 1.73 and 2.15. At 36 averages the expected values are a few % higher (about 1.80
     # and 2.25; 82 seeds gave 1.77-1.83 and 2.21-2.31): the eps formula is a large-sample one, and
     # coherence estimated from few averages reads high, so eps is slightly underestimated.
@@ -228,7 +236,7 @@ def test_random_error_matches_theory(cantilever):
     assert 2.05 < p99 < 2.50
 
 
-def test_peaks_are_the_cantilever_modes(cantilever):
+def test_peaks_are_the_cantilever_modes(cantilever, record_metric):
     _, res, _ = cantilever
     fn = natural_frequencies()[:3]
     found = np.array([p.f for p in res.peaks])
@@ -237,20 +245,24 @@ def test_peaks_are_the_cantilever_modes(cantilever):
     # is the larger of 1.5 bins and 10 % of eta * f_n. 82-seed worst: 0.19, 0.66 and 1.57 Hz
     # against limits of 0.47, 1.55 and 4.33 Hz.
     tol = np.maximum(1.5 * DF, 0.1 * ETA * fn)
+    record_metric("peak_freq_error_over_limit_max", np.max(np.abs(found - fn) / tol), 1.0)
+    record_metric("peak_coherence_min", min(p.coh for p in res.peaks), 0.95, op=">")
     assert np.all(np.abs(found - fn) <= tol), f"peaks {found} vs exact {fn}"
     assert min(p.coh for p in res.peaks) > 0.95  # 82-seed worst: 0.968
 
 
-def test_ods_at_each_peak_matches_exact_shape(cantilever):
+def test_ods_at_each_peak_matches_exact_shape(cantilever, record_metric):
     """The measured ODS is the exact operating shape at that frequency, in shape and amplitude."""
     test, res, _ = cantilever
     lams = cantilever_lambdas(3)
     # Peak amplitude tolerances, by mode: the sharp 61.7 Hz peak spans only ~8 bins, so
     # window smearing plus the coherence dip there cost a few %. 82-seed worst: 5.3, 0.74, 0.39 %.
     amp_tol = [0.08, 0.015, 0.015]
-    for p, lam_n, tol in zip(res.peaks, lams, amp_tol):
+    for mode, (p, lam_n, tol) in enumerate(zip(res.peaks, lams, amp_tol), 1):
         T_true = cantilever_T(XI, [p.f])[0]
         T_meas = res.spectra.T[p.index, test.responses]
+        record_metric(f"ods_one_minus_mac_mode{mode}", 1 - mac(T_meas, T_true), 1e-5, note=f"peak at {p.f:.1f} Hz")
+        record_metric(f"ods_tip_amplitude_error_mode{mode}", abs(T_meas[-1] / T_true[-1] - 1), tol, note=f"peak at {p.f:.1f} Hz")
         assert 1 - mac(T_meas, T_true) < 1e-5  # 82-seed worst: 2.2e-6
         assert np.abs(T_meas[-1] / T_true[-1] - 1) < tol
         # The ODS is not the mode shape: nearby modes and the residual of the rest mix in.

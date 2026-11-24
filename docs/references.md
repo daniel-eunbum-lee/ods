@@ -9,3 +9,13 @@
 7. **Richardson, M. H.** (1997). Is it a mode shape, or an operating deflection shape? *Sound & Vibration*, 31(1), 54–61. Background on ODS vs. mode shapes.
 8. **Welch, P. D.** (1967). The use of fast Fourier transform for the estimation of power spectra: A method based on time averaging over short, modified periodograms. *IEEE Transactions on Audio and Electroacoustics*, 15(2), 70–73. Source of Welch averaging.
 9. **SciPy** `scipy.signal.csd`, `welch`, `find_peaks`: <https://docs.scipy.org/doc/scipy/reference/signal.html>.
+
+## Software quality assurance (see [sqa.md](sqa.md))
+
+These informed the graded, lightweight approach used here. The project does not claim compliance with any of them.
+
+10. **IEEE** (Std 730). *IEEE Standard for Software Quality Assurance Processes*. No edition is cited on purpose; consult the [IEEE Standards Association](https://standards.ieee.org) for the current one.
+11. **IEEE** (Std 1012-2024). *IEEE Standard for System, Software, and Hardware Verification and Validation*. The 2016 edition is superseded: <https://standards.ieee.org/ieee/1012/7324>.
+12. **ASME** (2019). *V&V 10-2019: Standard for Verification and Validation in Computational Solid Mechanics*: <https://www.asme.org/codes-standards/find-codes-standards/standard-for-verification-and-validation-in-computational-solid-mechanics/2019>.
+13. **NASA** (2022). *NASA-STD-8739.8B: Software Assurance and Software Safety Standard*: <https://standards.nasa.gov/standard/NASA/NASA-STD-87398>. Approval date from the NASA Software Engineering Handbook.
+14. **Wilson, G., Bryan, J., Cranston, K., Kitzes, J., Nederbragt, L., & Teal, T. K.** (2017). Good enough practices in scientific computing. *PLOS Computational Biology*, 13(6), e1005510. <https://doi.org/10.1371/journal.pcbi.1005510>.
