@@ -1,10 +1,14 @@
 # Project instructions for Claude Code
 
-## Mandatory independent review (every change, no prompt needed)
+## Mandatory independent review (every non-trivial change, no prompt needed)
 
-Before reporting any work in this repo as done, and before committing, pushing, or merging it, have
-a **separate reviewer agent** go over it. This applies to code, tests, CI workflows, docs and
-configuration alike. Your own lint/test runs are necessary but are not the review.
+**If you were spawned as a reviewer or other subagent, skip this section: spawn no further agents
+and just report your findings.**
+
+Before reporting any non-trivial work in this repo as done, and before committing, pushing, or
+merging it, have a **separate reviewer agent** go over it. This applies to code, tests, CI
+workflows, configuration and behaviour-changing docs alike. Skip it for typo or formatting fixes,
+or when the user says to skip it. Your own lint/test runs are necessary but are not the review.
 
 1. Spawn a fresh, read-only reviewer with the Agent tool (general-purpose). It starts with no
    context, so the prompt must be self-contained: what the change is for, the files changed
