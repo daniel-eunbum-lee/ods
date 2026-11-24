@@ -116,7 +116,7 @@ The test was also checked against planted bugs. It fails for a conjugated cross-
 
 ### Synthetic box on isolators
 
-The synthetic model ([`src/ods/synth.py`](../src/ods/synth.py)) is a 9-node lumped-mass box on 4 isolators:
+The synthetic model ([`python/src/ods/synth.py`](../python/src/ods/synth.py)) is a 9-node lumped-mass box on 4 isolators:
 
 | Part | Values |
 |---|---|
@@ -155,7 +155,7 @@ The base input is complex-Gaussian random with the NAVMAT P-9492 shape [NAVMAT 1
 - Where modes are well separated, the Elastic view matches the true shape with MAC ≥ 0.94.
 - Low MPC flags the peaks where nearby modes mix (77.5, 222.5, 631 Hz), and those also have lower MAC. That's the ODS honestly showing a mix, not an error.
 
-The pytest suite ([`tests/test_ods.py`](../tests/test_ods.py)) checks all of this. It compares H1 against the analytic SDOF transmissibility and checks unit scaling (1 g at 10 Hz = 2.484 mm). It also checks rigid-body removal and the CSV/NPZ loaders, and runs end to end on a 20 s synthetic test with MAC thresholds.
+The pytest suite ([`python/tests/test_ods.py`](../python/tests/test_ods.py)) checks all of this. It compares H1 against the analytic SDOF transmissibility and checks unit scaling (1 g at 10 Hz = 2.484 mm). It also checks rigid-body removal and the CSV/NPZ loaders, and runs end to end on a 20 s synthetic test with MAC thresholds.
 
 ## Assumptions and limits
 

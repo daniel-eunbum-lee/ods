@@ -6,7 +6,7 @@ standalone HTML animation viewer.
 
 ## Phase 1 — Project setup
 - uv project (`pyproject.toml`, `.venv`), deps: numpy, scipy; dev: pytest.
-- Layout: `src/ods/` package, `tests/`, `data/synthetic/`, `outputs/`.
+- Layout: `src/ods/` package, `tests/`, `data/synthetic/`, `outputs/`. (Initial layout; the repository was later split into `python/`, `matlab/` and `testdata/`, see README.)
 
 ## Phase 2 — Synthetic shaker test (`ods.synth`)
 - 9-node lumped-mass model of a small box on 4 corner isolators:

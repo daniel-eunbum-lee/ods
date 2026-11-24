@@ -13,7 +13,8 @@ artifacts 90 days and attach the evidence bundle to releases.
 ## Existing controls (kept)
 - `main` ruleset: PR required, 3 status checks required, no deletion, no force-push.
   CI job names are therefore load-bearing — do not rename them.
-- Actions pinned to commit SHAs; uv pinned; `uv sync --locked`.
+- Actions pinned to commit SHAs; uv pinned; `uv sync --locked`. (Paths below are as of that change; the project
+  was later split into `python/` and `matlab/`, see `docs/sqa.md`.)
 - Analytical cantilever benchmark with stated, margin-justified tolerances.
 
 ## Phases

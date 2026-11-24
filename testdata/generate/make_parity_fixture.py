@@ -1,14 +1,15 @@
 """Write the MATLAB/Python parity fixture: a short synthetic run + Python's results.
 
-    uv run python matlab/tests/make_parity_fixture.py
+    cd python && uv run python ../testdata/generate/make_parity_fixture.py
 
-Creates matlab/tests/fixtures/parity/ with the test folder (time.mat etc.) and
-expected.mat holding the Python pipeline's spectra, views and peaks. run_tests.m
-processes the same folder in MATLAB and asserts the results agree to round-off.
+Creates testdata/data/parity/ with the test folder (time.mat etc.) and
+expected.mat holding the Python pipeline's spectra, views and peaks. Both the
+Python and the MATLAB suites process the same folder and assert the results agree.
 """
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -18,8 +19,11 @@ from ods.io import load_test
 from ods.pipeline import run
 from ods.synth import build_box_model, simulate, write_test
 
-OUT = Path(__file__).parent / "fixtures" / "parity"
-OPTS = dict(df=4.0, band=(20.0, 450.0))  # fs 1024 -> Nyquist 512 Hz; nfft 256
+OUT = Path(__file__).resolve().parents[1] / "data" / "parity"
+# Options come from the case spec, the single source of truth shared with both test runners
+# (fs 1024 -> Nyquist 512 Hz; nfft 256).
+SPEC = json.loads((OUT.parents[1] / "cases" / "parity-box-z.json").read_text())
+OPTS = dict(df=SPEC["options"]["df"], band=tuple(SPEC["options"]["band"]))
 
 
 def main() -> None:

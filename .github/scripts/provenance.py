@@ -1,6 +1,6 @@
 """Write evidence/provenance.json: what exactly was tested, and where and when.
 
-Run after the tests, inside the project environment (`uv run --locked python .github/scripts/provenance.py`),
+Run after the tests, inside the project environment (`cd python && uv run --locked python ../.github/scripts/provenance.py`),
 so the recorded package versions are the ones the tests actually used. Standard library only.
 """
 
@@ -41,7 +41,7 @@ def main(out_dir: Path) -> None:
         "job": os.environ.get("GITHUB_JOB"),
         "platform": platform.platform(),
         "python": sys.version,
-        "lockfile_sha256": hashlib.sha256((root / "uv.lock").read_bytes()).hexdigest(),
+        "lockfile_sha256": hashlib.sha256((root / "python" / "uv.lock").read_bytes()).hexdigest(),
         "packages": package_versions(),
     }
     out_dir.mkdir(parents=True, exist_ok=True)

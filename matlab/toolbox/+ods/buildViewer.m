@@ -1,7 +1,8 @@
 function outPath = buildViewer(res, outPath, title)
 %BUILDVIEWER Write the standalone HTML ODS viewer (same page as the Python tool).
 %   ods.buildViewer(res, outPath, title)
-%   Reuses src/ods/viewer_template.html from this repository and embeds the data as
+%   Reuses the viewer template in toolbox/resources (a copy of python/src/ods/viewer_template.html,
+%   kept identical by a Python test) and embeds the data as
 %   JSON. The JSON is written by hand rather than with jsonencode so that 1-element
 %   arrays stay arrays and the output is identical in MATLAB and Octave.
     if nargin < 3, title = 'Shaker test'; end
@@ -67,7 +68,7 @@ function outPath = buildViewer(res, outPath, title)
     json = strrep(json, '</', '<\/');
 
     here = fileparts(mfilename('fullpath'));
-    template = fullfile(here, '..', '..', 'src', 'ods', 'viewer_template.html');
+    template = fullfile(here, '..', 'resources', 'viewer_template.html');
     html = strrep(ods.readText(template), '/*__ODS_DATA__*/', json);
 
     outDir = fileparts(outPath);

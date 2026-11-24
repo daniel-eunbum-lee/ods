@@ -23,20 +23,24 @@ git clone https://github.com/daniel-eunbum-lee/ods.git
 ```
 
 ```powershell
-cd ods
+cd ods/python
 ```
+
+The Python tool lives in `python/`; run every `uv` command in this guide from that folder.
 
 ```powershell
 uv sync
 ```
 
-`uv sync` creates `.venv/` and installs numpy, scipy and pytest, plus the `ods` command itself. Check the install with:
+`uv sync` creates `python/.venv/` and installs numpy, scipy and pytest, plus the `ods` command itself. Check the install with:
 
 ```powershell
 uv run pytest
 ```
 
-> No uv? Run `python -m venv .venv`, activate it, then `pip install -e .` and `pip install pytest`. Everything below then works without the `uv run` prefix.
+> Upgrading from an older checkout? The environment now lives in `python/.venv`. Delete any old `.venv` in the repository root and select the new interpreter in your editor (in VS Code: *Python: Select Interpreter*).
+
+> No uv? Run `python -m venv .venv` (inside `python/`), activate it, then `pip install -e .` and `pip install pytest`. Everything below then works without the `uv run` prefix.
 
 ## 2. Run the demo
 

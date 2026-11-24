@@ -20,6 +20,9 @@ jobs:
     name: Python ${{ matrix.python-version }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: python # pyproject.toml, uv.lock, src/ and tests/ live here
     strategy:
       fail-fast: false
       matrix:
@@ -65,13 +68,13 @@ jobs:
         if: always()
         env:
           ODS_EVIDENCE_DIR: evidence
-        run: uv run --locked python .github/scripts/provenance.py
+        run: uv run --locked python ../.github/scripts/provenance.py
 
       - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: evidence-${{ matrix.os }}-py${{ matrix.python-version }}
-          path: evidence/
+          path: python/evidence/
           retention-days: 90
           if-no-files-found: error
