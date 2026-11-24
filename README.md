@@ -83,6 +83,37 @@ res = ods.process('my_test_z', 'results/my_test_z');  % your data (after addpath
 
 See [matlab/README.md](matlab/README.md).
 
+## Dependencies
+
+What the tool needs, in two main groups. **Runtime** dependencies are needed to *use* the tool: if one is missing, `ods` does not run. **Development** dependencies are needed only to *work on* the tool (run its tests, measure coverage, check the code style). You never need them just to process your own test data. A third group, **Build**, is only the tool that packages the project when it is built or installed.
+
+### Python (3.11 or newer)
+
+| Package | Group | Minimum version | Locked version* | What it is used for |
+|---|---|---|---|---|
+| [numpy](https://numpy.org) | Runtime | 2.4.6 | 2.5.5 (2.4.6 on Python 3.11) | Arrays, FFT, linear algebra |
+| [scipy](https://scipy.org) | Runtime | 1.17.1 | 1.18.1 (1.17.1 on Python 3.11) | Reading `.mat` files, Welch spectral estimates, peak finding |
+| [pytest](https://pytest.org) | Development | 9.2.0 | 9.2.0 | Runs the test suite |
+| [pytest-cov](https://pytest-cov.readthedocs.io) | Development | 7.1.0 | 7.1.0 | Measures how much of the code the tests run (coverage) |
+| [ruff](https://docs.astral.sh/ruff/) | Development | 0.17.6 | 0.17.6 | Checks the code for likely bugs (lint) |
+| [hatchling](https://hatch.pypa.io) | Build | 1.33.0 (pinned exactly) | n/a | Packages the project; only used when building or installing it. Pinned in `pyproject.toml`; build tools are not recorded in `uv.lock` |
+
+\* The exact versions that CI tests are recorded in [`python/uv.lock`](python/uv.lock); the minimums and groups are declared in [`python/pyproject.toml`](python/pyproject.toml). Everything else the tool imports comes with Python itself (`argparse`, `csv`, `json`, `pathlib`, `re`, `zipfile` and similar).
+
+- `uv sync` (from `python/`) installs **both** runtime and development packages, which is what you want when working on the repository.
+- `uv sync --no-dev` installs the runtime packages only.
+- The `.venv` folder is only where `uv` puts the installed packages. It is generated from `uv.lock` and is not part of the project, so it is not where the list lives.
+
+### MATLAB
+
+| Needs | Group | Notes |
+|---|---|---|
+| MATLAB, **base product only** | Runtime | No toolboxes are needed: Welch/H1, coherence and peak picking are implemented in the package itself. The numerical work uses base-MATLAB functions such as `fft`, `ifft`, `svd`, `eig`, `pinv` and `jsondecode`. CI passes on MATLAB R2026b. |
+| GNU Octave 7 or newer | Runtime (alternative) | Runs the same code and tests; it cannot produce JUnit or coverage reports. |
+| MATLAB's built-in unit-testing framework and code-coverage plugin | Development | Used only by `run_all_tests` and `buildtool test` to produce reports; part of MATLAB itself, not a separate download. `buildtool` needs R2022b or newer. |
+
+There is no MATLAB equivalent of `pyproject.toml`; to have MATLAB list the products the code uses, run `matlab.codetools.requiredFilesAndProducts` on the files in `matlab/toolbox`.
+
 ## Documentation
 
 | Guide | Contents |

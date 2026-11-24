@@ -32,7 +32,7 @@ The Python tool lives in `python/`; run every `uv` command in this guide from th
 uv sync
 ```
 
-`uv sync` creates `python/.venv/` and installs numpy, scipy and pytest, plus the `ods` command itself. Check the install with:
+`uv sync` creates `python/.venv/` and installs numpy and scipy (needed to run the tool), pytest, pytest-cov and ruff (needed only to work on it), plus the `ods` command itself. See [Dependencies](../README.md#dependencies) in the README. Check the install with:
 
 ```powershell
 uv run pytest
