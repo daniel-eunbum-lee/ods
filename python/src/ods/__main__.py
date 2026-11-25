@@ -95,7 +95,10 @@ def main(argv: list[str] | None = None) -> None:
     r.set_defaults(func=_cmd_run)
 
     a = ap.parse_args(argv)
-    a.func(a)
+    try:
+        a.func(a)
+    except (OSError, ValueError) as e:  # bad or missing input: a message, not a traceback
+        raise SystemExit(f"ods: error: {e}") from None
 
 
 if __name__ == "__main__":
