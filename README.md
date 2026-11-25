@@ -51,7 +51,7 @@ uv run ods synth
 uv run ods run data/synthetic
 ```
 
-Then open `outputs/ods_viewer.html` in a browser. To look before installing, download [`docs/demo/ods_viewer.html`](docs/demo/ods_viewer.html) and open it locally.
+Then open `outputs/ods_viewer.html` in a browser. To look before installing, download a demo viewer and open it locally: [box on isolators](docs/demo/ods_viewer.html) or the [cantilever beam benchmark](docs/demo/ods_viewer_cantilever.html).
 
 ## Your own test
 

@@ -32,6 +32,10 @@ def run(
     prominence_db: float = 3.0,
     min_coh: float = 0.5,
 ) -> Results:
+    if not np.std(test.data[:, test.control]) > 0:  # also catches NaN
+        raise ValueError(f"Control channel {test.channel_names[test.control]!r} is constant (or not finite): no reference signal")
+    if not df > 0:
+        raise ValueError(f"df must be a positive frequency resolution (Hz), got {df!r}")
     nfft = nfft_for_resolution(test.fs, df)
     sp = compute_spectra(test.data, test.control, test.fs, nfft)
     # H1 is referenced to what the control reads, (d_ctrl . e) * table acceleration. Rescale so
@@ -45,7 +49,7 @@ def run(
         )
     # b = gain * a_table, so H1 against b is T_true / gain: multiply to get T per unit a_table.
     sp.T = sp.T * gain
-    T_rel =relative_transmissibility(sp.T, test.channel_dirs, test.excitation_axis)
+    T_rel = relative_transmissibility(sp.T, test.channel_dirs, test.excitation_axis)
     T_rel[:, test.control] = 0.0  # the control is the reference: zero relative motion by definition
     disp = accel_to_displacement(T_rel, sp.f, test.units)
     resp = test.responses

@@ -60,7 +60,10 @@ Each step takes a few seconds. The second step prints the peaks it found. Since 
 start outputs/ods_viewer.html
 ```
 
-You can also open [`docs/demo/ods_viewer.html`](demo/ods_viewer.html) without running anything. Download it and open it in a browser; GitHub shows HTML as source.
+You can also open a demo viewer without running anything. Download it and open it in a browser; GitHub shows HTML as source.
+
+- [`docs/demo/ods_viewer.html`](demo/ods_viewer.html): the box-on-isolators test above.
+- [`docs/demo/ods_viewer_cantilever.html`](demo/ods_viewer_cantilever.html): the base-driven aluminium cantilever (200 × 25 × 3 mm, eight accelerometers along the beam) whose exact solution is the [benchmark](method.md#validation). The three peaks are at 61.6, 386.6 and 1082.5 Hz, against exact natural frequencies of 61.7, 386.6 and 1082.5 Hz.
 
 ## 3. Explore the viewer
 

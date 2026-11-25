@@ -218,12 +218,27 @@ def _load_time(path: Path, fs_meta: float | None) -> tuple[np.ndarray, list[str]
     # test.json wins, so a user can correct a wrong rate without rewriting the time file.
     fs = fs_meta if fs_meta is not None else fs_file
     if fs is None:
-        raise ValueError("Sample rate unknown: put 'fs' in test.json or a 'time' column in the CSV")
-    return data, names, float(fs)
+        raise ValueError("Sample rate unknown: put 'fs' in test.json, or a strictly increasing 'time' column in the CSV")
+    try:
+        fs = float(fs)
+    except (TypeError, ValueError):
+        raise ValueError(f"Sample rate fs must be a number, got {fs!r}") from None
+    if not math.isfinite(fs) or fs <= 0:
+        raise ValueError(f"Sample rate fs must be a positive number (Hz), got {fs!r}")
+    if data.ndim != 2 or data.shape[0] == 0 or data.shape[1] != len(names):
+        raise ValueError(
+            f"{path.name}: {len(names)} channel names but data has shape {data.shape} (expected N >= 1 samples x {len(names)} channels)"
+        )
+    bad_channels = [n for n, ok in zip(names, np.isfinite(data).all(axis=0)) if not ok]
+    if bad_channels:  # NaN or inf would propagate through every spectrum of that channel
+        raise ValueError(f"{path.name}: NaN or infinite samples in channel(s) {bad_channels}")
+    return data, names, fs
 
 
 def load_test(test_dir: str | Path) -> TestData:
     test_dir = Path(test_dir)
+    if not test_dir.is_dir():
+        raise FileNotFoundError(f"Test folder not found: {test_dir}")
     meta_path = _in_folder(test_dir, "test.json")
     meta = json.loads(meta_path.read_text(encoding="utf-8-sig")) if meta_path.exists() else {}
     default = next((n for n in ("time.npz", "time.mat", "time.csv") if (test_dir / n).exists()), "time.csv")

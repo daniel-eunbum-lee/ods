@@ -107,7 +107,13 @@ These are display-only edges. Lines can include `base` nodes, for example to dra
 | `channels.csv references nodes missing from geometry.csv` | Node id typo |
 | `Need exactly one channel with role=control` | Zero or several control rows |
 | `Bad direction '...'` | Not `±X/Y/Z` and not three numbers |
-| `Sample rate unknown` | No `fs` anywhere and no `time` column |
+| `Sample rate unknown` | No `fs` anywhere and no `time` column (or a `time` column that does not increase) |
+| `Sample rate fs must be a positive number` / `must be a number` | (Python) `fs` is zero, negative, not finite or not a number |
+| `N channel names but data has shape ...` | (Python) The time file has a different number of columns than channel names, or no samples |
+| `NaN or infinite samples in channel(s) [...]` | (Python) A time record contains NaN or inf; the named channels need fixing or trimming |
+| `Control channel '...' is constant` | (Python) The control channel is flat (for example unplugged), so there is no reference signal |
+| `df must be a positive frequency resolution` | (Python) `--df` is zero, negative or NaN |
+| `Test folder not found` | (Python) The folder path is wrong |
 | `excitation_axis must be X, Y or Z (optionally signed)` | `excitation_axis` in `test.json` is something else (e.g. `"vertical"` or a number). Use `null` or leave it out to take the control's direction |
 | `time_file must be a relative path inside the test folder` / `must end in ...` / `must not name a Windows device` | `time_file` is absolute, a network path, contains `..`, names a device, or has another extension |
 | `... is a link to a file outside the test folder` | (Python) A file in the folder is a symbolic link to somewhere else |

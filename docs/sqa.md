@@ -53,7 +53,7 @@ ODS_EVIDENCE_DIR=evidence uv run pytest -ra --junitxml=evidence/junit.xml --cov
   GitHub Actions are pinned to commit SHAs.
 - `.gitattributes` fixes text files to LF so results and hashes do not depend on the checkout OS.
 - Quality gates in CI: `ruff check` (bug-finding rules, `pyproject.toml`) and a coverage floor
-  (`fail_under`, currently 78 % against a measured 82 %).
+  (`fail_under`, currently 78 % against a measured 96 %).
 - The ruleset requires no approving review (single maintainer): there is **no independent review**.
   Changes are also gone over by a separate AI reviewer agent (see `CLAUDE.md`). That is a useful
   check, but it is a practice, not independent review in the SQA sense.
@@ -74,6 +74,9 @@ ODS_EVIDENCE_DIR=evidence uv run pytest -ra --junitxml=evidence/junit.xml --cov
 | R10 | The synthetic test generator is well posed, its modal formula matches an SDOF reference, and it matches its stated input level | `test_box_model_is_well_posed`, `test_modal_transmissibility_matches_sdof`, `test_input_level_matches_profile` |
 | R11 | Files that must exist twice (the MATLAB toolbox must be self-contained; a Python build cannot reach the repo root) stay identical | `test_matlab_viewer_template_matches_python`, `test_python_license_copy_matches_root` |
 | R12 | A test folder from someone else cannot make the tool read outside it (Python also refuses links that lead out; MATLAB has no link check), is refused when the size it declares is above the limit (a crafted compressed MAT file can still exceed what it declares; a `.mat` `channels` cell and `truth.mat` are not size-bounded; on GNU Octave the MAT-file checks run after the file is read), cannot make the tool load anything but the expected arrays, and text from it cannot act as a spreadsheet formula, shift CSV columns, or inject markup or script into the viewer | `python/tests/test_input_safety.py` (`test_time_file_outside_the_test_folder_is_rejected`, `test_time_file_in_a_subfolder_is_accepted`, `test_link_to_a_file_outside_the_test_folder_is_rejected`, `test_time_data_above_the_size_limit_is_refused_before_loading`, `test_npz_member_named_data_counts_against_the_limit`, `test_mat_with_a_second_data_variable_is_refused`, `test_mat_data_in_a_cell_is_refused_before_loading`, `test_csv_size_estimate_is_close_to_the_real_size`, `test_mat_loads_only_the_variables_it_uses`, `test_non_finite_coordinates_are_rejected`, `test_csv_cell`, `test_export_keeps_hostile_channel_names_in_their_own_cell`, `test_viewer_embeds_hostile_text_and_non_finite_numbers_safely`, `test_viewer_csp_allows_only_its_own_script`); `testUntrustedInput`, `testSafeOutput` (MATLAB) |
+| R13 | (Python only) Bad time data or settings stop with a clear message instead of a silent or cryptic result: NaN or infinite samples, channel names that do not match the data columns, a missing or non-positive sample rate, a constant control channel, a non-positive resolution, a missing test folder | `python/tests/test_input_validation.py` |
+| R14 | The command line (`ods synth`, `ods run`, `python -m ods`) works end to end and reports bad input as a one-line error with exit code 1, not a traceback | `python/tests/test_cli.py` |
+| R15 | The demo viewers in `docs/demo/` carry the current viewer script and a matching Content-Security-Policy, so they cannot lag behind the tool | `python/tests/test_demo_viewers.py` (rebuild with `testdata/generate/make_demo_viewers.py`) |
 
 When behaviour is added or changed, update this table in the same pull request.
 
@@ -85,10 +88,10 @@ was wrong and what results it could have affected (for example PR #13, a control
 ## 6. Known gaps
 
 - No validation against real measured data (section 1).
-- `python/src/ods/__main__.py` (the command line) has no tests: 0 % coverage.
 - The MATLAB suite runs in CI on GNU Octave (a different implementation of the language) and on real MATLAB (the latest release; R2026b at first run, including `buildtool test`) in a non-blocking job, because its set-up depends on MathWorks' action and licensing. Neither CI job is a required check on `main` unless the ruleset is changed. The analytic cantilever benchmark is Python-only: it needs a 60 s noise record (~22 MB) that is generated, not stored.
 - MATLAB results (JUnit, coverage; for Octave only the log) are uploaded as separate CI artifacts (`matlab-report`, `matlab-octave-report`, 90 days) but are not part of the release evidence bundle, because `release-evidence.yml` reuses only `tests.yml`. The same reports can be produced on any machine with `run_all_tests` (see `matlab/README.md`).
-- `ruff format` is not enforced (it would reformat 7 files), and `zip()` without `strict=` is
+- `ruff format` is not enforced (it would reformat 5 files), and `zip()` without `strict=` is
   allowed (8 places): both are left for separate changes.
+- The MATLAB loader does not yet have the R13 checks (NaN or infinite samples, a non-positive `fs`, a channel-count mismatch, a constant control channel, a non-positive `df`): such input runs in MATLAB and gives meaningless results instead of an error. Python rejects it.
 - No independent code review (single maintainer).
 - No security or dependency-vulnerability scan.
